@@ -1,11 +1,13 @@
 #!/bin/bash
 
+docker_compose_file='pilot2-event2_docker-compose.yml'
+
 stopDocker()
 {
 
 echo
 echo STOPPING AND REMOVING VUG CONTAINERS
-$docker_compose_cmd -f pilot2-event2_docker-compose.yml down
+$docker_compose_cmd -f $docker_compose_file down
 
 }
 
@@ -69,6 +71,6 @@ fi
 
 trap stopDocker SIGINT
 
-$docker_compose_cmd -f pilot2-event2_docker-compose.yml pull
+$docker_compose_cmd -f $docker_compose_file pull
 
-$docker_compose_cmd -f pilot2-event2_docker-compose.yml up
+$docker_compose_cmd -f $docker_compose_file up

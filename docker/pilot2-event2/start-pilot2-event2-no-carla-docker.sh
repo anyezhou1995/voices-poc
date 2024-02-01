@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 docker_compose_file='pilot2-event2_no-carla_docker-compose.yml'
 
 stopDocker()
