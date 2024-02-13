@@ -1,10 +1,10 @@
 #
-# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build -t usdotfhwastoldev/voices:pilot2-event2-0.0.2 . --progress=plain -f pilot2-event2_Dockerfile
+# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build -t usdotfhwastoldev/voices:pilot2-event2-0.0.3 . --progress=plain -f pilot2-event2_Dockerfile
 #
 
 FROM ubuntu:20.04
 
-LABEL version="0.0.2"
+LABEL version="0.0.3"
 LABEL description="VOICES Docker image for Pilot 2 Event 2"
 
 SHELL ["/bin/bash", "-ec"]
@@ -53,7 +53,7 @@ RUN apt-get update && \
     # install debug tools
     iputils-ping nano tshark git \
     # install sumo tools
-    sumo=1.18.0-1~focal sumo-tools=1.18.0-1~focal sumo-doc=1.18.0-1~focal \
+    sumo=1.19.0-1~focal sumo-tools=1.19.0-1~focal sumo-doc=1.19.0-1~focal \
     # cleanup apt lists
     && rm -rf /var/lib/apt/lists/*
 

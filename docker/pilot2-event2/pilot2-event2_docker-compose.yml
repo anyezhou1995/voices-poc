@@ -47,6 +47,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${VUG_LOCAL_VOICES_POC_PATH}:/home/voices-poc
       - ${VUG_LOCAL_TENADEV_DIR}:/home/tenadev
+      - /dev/input:/dev/input
     deploy:
       resources:
         reservations:

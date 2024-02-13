@@ -216,22 +216,6 @@ fi
 
 echo "----- STARTING CARLA-CARMA INTEGRATION TOOL -----"
 
-docker run \
-	   -it -d --rm \
-       --name carma_carla_integration \
-       --net=host \
-       usdotfhwastol/carma-carla-integration:K900-test
-echo "------------------------exec---------------------------------"
-docker exec \
-        -it \
-        carma_carla_integration \
-        bash -c \
-        "export PYTHONPATH=$PYTHONPATH:/home/PythonAPI/carla/dist/carla-0.9.10-py3.7-linux-x86_64.egg && \
-        source /home/carma_carla_ws/devel/setup.bash && \
-        roslaunch carma_carla_agent carma_carla_agent.launch spawn_point:=\"$SPAWN_PT\" town:=\"$carla_map\" selected_route:='UCLA' synchronous_mode:='true' speed_Kp:=0.4 speed_Ki:=0.03 speed_Kd:=0
-        &> $SIM_LOG
-
-# Should work but doesn't
-#roslaunch carma_carla_agent carma_carla_agent.launch spawn_point:='$SPAWN_PT' role_name:='$VUG_CARMA_VEHICLE_ID' town:='$carla_map' selected_route:='UCLA' synchronous_mode:='true' speed_Kp:='0.4' speed_Ki:='0.03' speed_Kd:='0'"
+$VUG_LOCAL_VOICES_POC_PATH/scripts/run_scripts/pilot2/src/start-carma-carla-integration.sh
 
 cleanup

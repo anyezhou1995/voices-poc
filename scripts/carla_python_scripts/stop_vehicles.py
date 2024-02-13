@@ -87,6 +87,11 @@ def main():
         type=int,
         help='Random device seed')
     argparser.add_argument(
+        '-e', '--exclude',
+        metavar='VEHICLE_NAME',
+        type=str,
+        help='Exclude these vehicles when deleting (comma separated, Ex: VW-MAN-1,ECON-MAN-1)')
+    argparser.add_argument(
         '--car-lights-on',
         action='store_true',
         default=False,
@@ -112,13 +117,52 @@ def main():
         
         #client = carla.Client()
         #client.set_timeout(10.0)
-        
-        print("All current vehicle locations")
-        vehicles = world.get_actors().filter('vehicle.*')
-        for vehicle in vehicles:
-            print(vehicle)
-            print("attributes: " + str(vehicle.attributes))
-            print("vehicle transform: " + str(vehicle.get_transform()))
+        already_stopped_once = []
+
+        if args.exclude:
+            vehicles_to_exclude = (args.exclude).split(",")
+        else:
+            vehicles_to_exclude = []
+
+        while True:
+
+            vehicles = world.get_actors().filter('vehicle.*')
+
+            stopped_vehicles = []
+
+            print("Checking for new vehicles to stop...")
+
+            for vehicle in vehicles:
+                
+                if vehicle.attributes["role_name"] in vehicles_to_exclude:
+                    print("\tSkipping: " + str(vehicle.attributes["role_name"]))
+                    continue
+                elif vehicle.attributes["role_name"] in already_stopped_once:
+                    print("\tAlready stopped: " + str(vehicle.attributes["role_name"]))
+                    continue
+                
+                print(f'\tStopping vehicle: {vehicle.attributes["role_name"]}')
+                # print("attributes: " + str(vehicle.attributes))
+                # print("location: " + str(vehicle.get_location()))
+                veh_control = carla.VehicleControl()
+                veh_control.hand_brake = True
+                vehicle.apply_control(veh_control)
+
+                stopped_vehicles.append(vehicle)
+                already_stopped_once.append(vehicle.attributes["role_name"])
+
+
+            if len(stopped_vehicles) > 0:
+                time.sleep(5)
+
+                for vehicle in stopped_vehicles:
+
+                    veh_control = carla.VehicleControl()
+                    veh_control.hand_brake = False
+                    vehicle.apply_control(veh_control)
+
+            time.sleep(1)
+                
 
 
         
@@ -127,8 +171,8 @@ def main():
         #print(dir(trafficlights[0]))
         #for light in trafficlights:
             #print(light.get_group_traffic_lights())
-        # print("")
-        # print("All Vehicle Blueprints:")
+            
+            
         # blueprints = [bp for bp in world.get_blueprint_library().filter('vehicle.*')]
         # for blueprint in blueprints:
         #     print(blueprint.id)

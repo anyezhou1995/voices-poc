@@ -1,0 +1,27 @@
+FROM usdotfhwastoldev/voices:base-latest
+
+# Make sure that the docker container gets enough memory or the compiler will crash building the CppClient
+# On macos I increased the memory available from 2.0GB to 6.0GB.  I didn't try lower than this yet.
+# The settings are for the VM that runs the containers and can be accessed through the Docker UI settings.
+# Click on the gear icon (Setting) | Resoures then increase the memory.
+# docker build --build-arg LEIDOS_TOKEN=$LEIDOS_TOKEN -t usdotfhwastoldev/voices:build-general-0.0.1 . --progress=plain -f tena-general-dockerfile
+
+ARG DEBIAN_FRONTEND="noninteractive" 
+ARG TZ="America/New_York"
+ARG LEIDOS_TOKEN
+
+RUN apt-get update && apt-get install -y wget software-properties-common
+
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | gpg --dearmor - | tee /etc/apt/trusted.gpg.d/kitware.gpg >/dev/null
+RUN apt-add-repository "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
+RUN apt update
+
+RUN apt-get install -y \
+    cmake git build-essential libboost-all-dev clang-8 g++-7 lld-8 g++-8 ninja-build \
+    libvulkan1 libpng-dev libtiff5-dev libjpeg-dev tzdata sed curl openssl unzip autoconf libtool rsync libxml2-dev && \
+    update-alternatives --install /usr/bin/clang++ clang++ /usr/lib/llvm-8/bin/clang++ 180 && \
+    update-alternatives --install /usr/bin/clang clang /usr/lib/llvm-8/bin/clang 180
+
+RUN git clone https://${LEIDOS_TOKEN}@github.com/usdot-fhwa-stol/vug-cmake-package.git cmake_temp && \
+	mv cmake_temp/cmake/ /home/TENA/lib/ && \
+	rm -rf cmake_temp   

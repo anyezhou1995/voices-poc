@@ -53,7 +53,7 @@ RUN apt-get update && \
     # install debug tools
     iputils-ping nano tshark git \
     # install sumo tools
-    sumo=1.18.0-1~focal sumo-tools=1.18.0-1~focal sumo-doc=1.18.0-1~focal \
+    sumo=1.19.0-1~focal sumo-tools=1.19.0-1~focal sumo-doc=1.19.0-1~focal \
     # cleanup apt lists
     && rm -rf /var/lib/apt/lists/*
 

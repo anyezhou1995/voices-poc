@@ -13,23 +13,23 @@
 
   <vehicles>
 
-    <vehicle name="FHWA-CAR-L" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-L" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA_CAR_3" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARLA manual="true" generate_bsms="true"></CARLA>
+            <CARLA generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.300399" longitudeInDegrees="-83.698250" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=86.123024 y=21.699108 yaw=272 -->
-            <Heading>272</Heading>
+            <GeodeticPosition latitudeInDegrees="42.30007647208245" longitudeInDegrees="-83.69859552000251" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=56.61892318725586 y=57.54566955566406 yaw=257.85 -->
+            <Heading>257.85</Heading>
         </initialTSPI>
     </vehicle>
 
     <vehicle name="UCLA-OPENCDA" bsmid="f03ad626" type="vehicle.mustang.mustang" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARLA manual="true" generate_bsms="true"></CARLA>
+            <CARLA generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.30024832362088" longitudeInDegrees="-83.69862420972059" heightAboveEllipsoidInMeters="237"/>
+            <GeodeticPosition latitudeInDegrees="42.300334777389196" longitudeInDegrees="-83.69862420972059" heightAboveEllipsoidInMeters="237"/>
             <!-- x=54.25676727294922 y=-38.415374755859375 yaw=90 -->
             <Heading>90</Heading>
         </initialTSPI>
@@ -45,7 +45,7 @@
 
     <vehicle name="ORNL-AUTO-1" bsmid="f03ad627" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARLA manual="true" generate_bsms="true"></CARLA>
+            <CARLA generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.299775" longitudeInDegrees="-83.697315" heightAboveEllipsoidInMeters="250"/>
@@ -54,9 +54,9 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="FHWA-SUMO-01" bsmid="f03ad628" type="vehicle.volkswagen.t2" owner="CARLA-FHWA-L" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA-SUMO-01" bsmid="f03ad628" type="vehicle.volkswagen.t2" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-                <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-L" roleName="FHWA-SUMO-01" generate_bsms="true"/>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-SUMO-01" generate_bsms="true"/>
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.301177" longitudeInDegrees="-83.698684" heightAboveEllipsoidInMeters="250"/>
@@ -65,9 +65,9 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="FHWA-SUMO-02" bsmid="f03ad629" type="vehicle.mercedes-benz.coupe" owner="CARLA-FHWA-L" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA-SUMO-02" bsmid="f03ad629" type="vehicle.mercedes-benz.coupe" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-                <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-L" roleName="FHWA-SUMO-02" generate_bsms="true"/>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-SUMO-02" generate_bsms="true"/>
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.301152" longitudeInDegrees="-83.697944" heightAboveEllipsoidInMeters="250"/>
