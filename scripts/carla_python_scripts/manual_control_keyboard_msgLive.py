@@ -1078,6 +1078,7 @@ from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
 from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_lookBack
 from controller_ts import VehiclePIDController
+from speed_control_implementation_ggg import IntelligentDriverModel
 
 ## TODO: Create a dummy car, record our own data.
 
@@ -1099,6 +1100,12 @@ def game_loop(args):
     world = None
 
     ego_speed_buffer = []
+
+    Data4JH = []
+
+    pass_or_not = 0
+    last_dist2bar = 1e6
+    record_freq = 2
 
     try:
         client = carla.Client(args.host, args.port)
@@ -1124,7 +1131,7 @@ def game_loop(args):
 
         wp_id_cache, wp_id = 0, 0
 
-        df_waypoints = pd.read_csv('./waypoint_files/ORNL_waypoints.csv')
+        df_waypoints = pd.read_csv('./ORNL_waypoints.csv')
         cx, cy, cz = df_waypoints['x'].to_numpy(), df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
 
         #spatCache = {}
@@ -1135,6 +1142,8 @@ def game_loop(args):
             #wp_hist= json.load(fp)
 
         clock = pygame.time.Clock()
+
+        run_step = 0
 
         while True:
             clock.tick_busy_loop(60)
@@ -1184,7 +1193,8 @@ def game_loop(args):
                     break
 
             if BSM_flag is True:
-                print('############ Carla map difference: ', x-x1, y-y1, '############')
+                #print('############ Carla map difference: ', x-x1, y-y1, '############')
+                pass
 
             '''
             if not BSM_flag:
@@ -1202,8 +1212,17 @@ def game_loop(args):
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
             spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
-            dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 0
+            dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
             speed_diff = speed - speed_ego
+
+            print(dist2bar)
+            
+            if spacing > 75 or np.isnan(speed):
+                speed = np.nan
+                spacing = np.nan
+
+            if controller.eco_drive and pass_or_not == 0 and round(last_dist2bar,2) < round(dist2bar,2):
+                pass_or_not = 1
 
             if spatInfo != {}:
                 spatCache = spatInfo
@@ -1218,14 +1237,22 @@ def game_loop(args):
                 current_update_time = datetime.datetime.now().timestamp()
                 dt = current_update_time - cache_time
 
-                if dt >= 1:
-                    RefSpd = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                if dt >= 0.2:
+                    if not pass_or_not:
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                        print('Can get before pass!')
+                    else:
+                        print('Do CF', speed_ego, speed, spacing)
+                        uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
+                    RefSpd = min(15, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
             except:
                 print('------------------------Cannot get advisory speed!!!------------------------')
 
-            #print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
-            #print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '--------------------------')
+            print('At time: ', reference_timestamp)
+            print(spatCache)
+            print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
+            print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; To stopbar: ', dist2bar, '--------------------------')
             
             #print(controller.eco_drive)
             #speed2go = 3.6*speed
@@ -1260,11 +1287,17 @@ def game_loop(args):
             world.render(display)
             pygame.display.flip()
 
-            ego_speed_buffer.append(speed_ego)
+            if run_step%record_freq == 0:
+                last_dist2bar = dist2bar
 
-            draw_box(world.world, x1, y1, 240)
+            ego_speed_buffer.append(speed_ego)
+            Data4JH.append(dataToSave)
+
+            #draw_box(world.world, x1, y1, 240)
 
     finally:
+
+        #np.save('./JHDEBUG.npy', Data4JH)
 
         if (world and world.recording_enabled):
             client.stop_recorder()
