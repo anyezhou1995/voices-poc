@@ -47,7 +47,7 @@ def list_json_file():
 
 def load_selected_json_file(selected_file):
     try:
-        with open(selected_file, 'r') as file:
+        with open("misc/" + selected_file, 'r') as file:
             data = json.load(file)
         return data
     except FileNotFoundError:
@@ -200,22 +200,22 @@ try:
         print("\nJSON data loaded successfully")
         # print(all_sdsm_json_data)
 
-        # mcity_origin = GeodeticToEcef(42.30059341574939,-83.69928318881136,0)
+        mcity_origin = GeodeticToEcef(42.30059341574939,-83.69928318881136,245)
 
-        mcity_origin = { 
-                    "x": 518508.658, 
-                    "y": -4696054.02, 
-                    "z": 0
-                }
+        # mcity_origin = { 
+        #             "x": 518508.658, 
+        #             "y": -4696054.02, 
+        #             "z": 305
+        #         }
         
         print("mcity_origin: " + str(mcity_origin))
 
-        # world.debug.draw_string(
-        #         carla.Location(x=mcity_origin["x"], y=mcity_origin["y"], z=draw_z_height), 
-        #         "ORIGIN", 
-        #         draw_shadow=False,
-        #         color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
-        #         persistent_lines=True)
+        world.debug.draw_string(
+                carla.Location(x=mcity_origin["x"], y=mcity_origin["y"], z=draw_z_height), 
+                "ORIGIN", 
+                draw_shadow=False,
+                color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
+                persistent_lines=True)
         
         world.debug.draw_string(
                 carla.Location(x=0, y=0, z=245), 
@@ -239,22 +239,35 @@ try:
                     continue
 
                 
-                # vru_ref_pos = GeodeticToEcef(sdsm_json["refPos"]["lat"],sdsm_json["refPos"]["long"],0)
+                vru_ref_pos = GeodeticToEcef(sdsm_json["refPos"]["lat"],sdsm_json["refPos"]["long"],245)
 
-                vru_ref_pos = { 
-                    "x": 518558.359, 
-                    "y": -4696023.893, 
-                    "z": 0
-                }
+                # print(f'vru_ref_pos: {vru_ref_pos}')
+
+                # vru_ref_pos = { 
+                #     "x": 5185583.59, 
+                #     "y": -46.96023893, 
+                #     "z": 0
+                # }
+
+
                 
                 x_fudge = 0#4
                 y_fudge = 0#9
                 
-                # local_vru_ref_pos = { 
-                #     "x": (vru_ref_pos["x"] - mcity_origin["x"] + x_fudge), 
-                #     "y": -1*(vru_ref_pos["y"] - mcity_origin["y"] + y_fudge), 
-                #     "z": (vru_ref_pos["z"] - mcity_origin["z"])
-                # }
+                local_vru_ref_pos_calc = { 
+                    "x": (vru_ref_pos["x"] - mcity_origin["x"] + x_fudge), 
+                    "y": -1*(vru_ref_pos["y"] - mcity_origin["y"] + y_fudge), 
+                    "z": (vru_ref_pos["z"] - mcity_origin["z"])
+                }
+
+                print(f'local_vru_ref_pos_calc: {local_vru_ref_pos_calc}')
+
+                world.debug.draw_string(
+                    carla.Location(x=local_vru_ref_pos_calc["x"], y=local_vru_ref_pos_calc["y"], z=draw_z_height), 
+                    "[x] - " + str(crossing["crossing"]) + "_r-CALC", 
+                    draw_shadow=False,
+                    color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
+                    persistent_lines=True)
 
                 local_vru_ref_pos = { 
                     "x": 54.403637, 
@@ -262,11 +275,14 @@ try:
                     "z": 0
                 }
 
+                print(f'local_vru_ref_pos: {local_vru_ref_pos}')
+
+                print(f'diff: x: {local_vru_ref_pos["x"] - local_vru_ref_pos_calc["x"]} y: {local_vru_ref_pos["y"] - local_vru_ref_pos_calc["y"]}')
                 
                 
                 world.debug.draw_string(
                     carla.Location(x=local_vru_ref_pos["x"], y=local_vru_ref_pos["y"], z=draw_z_height), 
-                    str(crossing["crossing"]) + "_r", 
+                    "[x] - " + str(crossing["crossing"]) + "_r-EST", 
                     draw_shadow=False,
                     color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
                     persistent_lines=True)
@@ -280,12 +296,12 @@ try:
                 # print("\tlocal_vru_ref_pos: " + str(local_vru_ref_pos))
                 # print("\tvru_x: " + str(vru_x))
                 # print("\tvru_y: " + str(vru_y))
-                world.debug.draw_string(
-                    carla.Location(x=vru_x, y=vru_y, z=draw_z_height), 
-                    str(crossing["crossing"]), 
-                    draw_shadow=False,
-                    color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
-                    persistent_lines=True)
+                # world.debug.draw_string(
+                #     carla.Location(x=vru_x, y=vru_y, z=draw_z_height), 
+                #     str(crossing["crossing"]), 
+                #     draw_shadow=False,
+                #     color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
+                #     persistent_lines=True)
 
 
         

@@ -106,7 +106,10 @@ done
 #            role_name:=\"$VUG_CARMA_VEHICLE_ID\"" \
 
 # loop
-SPAWN_PT="111.573105, -69.141998, 240, 0, 0, 270"
+# SPAWN_PT="109.881569, -65.993828, 240, 0, 0, 270"
+
+# yield test
+SPAWN_PT="110.145599, -69.313705, 240, 0, 0, 270"
 
 echo "----- STARTING CARLA-CARMA INTEGRATION TOOL -----"
 
@@ -128,13 +131,13 @@ docker exec \
         roslaunch carma_carla_agent carma_carla_agent.launch \
             spawn_point:=\"$SPAWN_PT\" \
             town:=\"$carla_map\" \
-            selected_route:='p2e2_loop' \
+            selected_route:='p2e2_yield_test' \
             synchronous_mode:='true' \
             use_sim_time:='true' \
             speed_Kp:=0.4 \
             speed_Ki:=0.03 \
             speed_Kd:=0 \
-            start_delay_in_seconds:='60' \
+            start_delay_in_seconds:='40' \
             role_name:='carma_1'" \
     &> $SIM_LOG
 

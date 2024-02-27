@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    
+    <tlLogic id="277" type="static" programID="vug" offset="0">
+        <phase duration="999" state="OOOOOO"/>
+        <param key="linkSignalID:0" value="656"/>
+        <param key="linkSignalID:1" value="656"/>
+        <param key="linkSignalID:2" value="9957"/>
+        <param key="linkSignalID:3" value="9957"/>
+        <param key="linkSignalID:4" value="658"/>
+        <param key="linkSignalID:5" value="658"/>
+    </tlLogic>
+    
+    <tlLogic id="94" type="static" programID="vug" offset="0">
+        <phase duration="999" state="OOOOOOOOOOOO"/>
+        <param key="linkSignalID:0" value="653"/>
+        <param key="linkSignalID:1" value="653"/>
+        <param key="linkSignalID:2" value="653"/>
+        <param key="linkSignalID:3" value="652"/>
+        <param key="linkSignalID:4" value="652"/>
+        <param key="linkSignalID:5" value="652"/>
+        <param key="linkSignalID:6" value="655"/>
+        <param key="linkSignalID:7" value="655"/>
+        <param key="linkSignalID:8" value="655"/>
+        <param key="linkSignalID:9" value="654"/>
+        <param key="linkSignalID:10" value="654"/>
+        <param key="linkSignalID:11" value="654"/>
+    </tlLogic>
+
+</additional>

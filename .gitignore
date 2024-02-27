@@ -1,5 +1,6 @@
 #ignore data and pycache for j2735 decoder
 scripts/encoding_decoding_tools/J2735_pcap_decoder/data/
+scripts/encoding_decoding_tools/decode_single_packet/decoded_packet.json
 
 #ignore log directories
 logs/
@@ -11,13 +12,21 @@ logs/
 scripts/carla_python_scripts/misc
 
 #ignore SDSM.py because contains paid ASN1
-scripts/carla_python_scripts/SDSM.py
+scripts/**/SDSM.py
 
 #ignore node_info.config
 config/node_info.config
 
 #intelliJ files
 .idea/
+
+#waypoint output files
+scripts/carla_python_scripts/waypoint_files/
+
+#performance analysis outputs
+scripts/performance_analysis/results/
+scripts/performance_analysis/generated_import_files/
+scripts/performance_analysis/performance_analysis.log
 
 # ignore docker lib files
 docker/build/lib/BUILD

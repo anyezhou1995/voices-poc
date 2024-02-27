@@ -15,12 +15,12 @@
 
     <vehicle name="FHWA_CAR_3" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARLA generate_bsms="true"></CARLA>
+            <CARLA manual="true" generate_bsms="false"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.30007647208245" longitudeInDegrees="-83.69859552000251" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=56.61892318725586 y=57.54566955566406 yaw=257.85 -->
-            <Heading>257.85</Heading>
+            <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=139.3627471923828 y=-228.6690216064453 yaw=166.89 -->
+            <Heading>166.89</Heading>
         </initialTSPI>
     </vehicle>
 
@@ -29,17 +29,17 @@
             <CARLA generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.300334777389196" longitudeInDegrees="-83.69862420972059" heightAboveEllipsoidInMeters="237"/>
-            <!-- x=54.25676727294922 y=-38.415374755859375 yaw=90 -->
-            <Heading>90</Heading>
+            <GeodeticPosition latitudeInDegrees="42.30245402283134" longitudeInDegrees="-83.69784540965374" heightAboveEllipsoidInMeters="237"/>
+            <!-- x=118.37894439697266 y=-207.12489318847656 yaw=103.40 -->
+            <Heading>103.40</Heading>
         </initialTSPI>
     </vehicle>
 
     <vehicle name="ANL-DYNO-1" bsmid="f03ad623" type="vehicle.nissan.micra" owner="CARLA-ANL-2" material="Aluminum" lvcIndicator="Live">
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.300508" longitudeInDegrees="-83.699182" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=8.472660 y=8.384986 yaw=187 -->
-            <Heading>187</Heading>
+            <GeodeticPosition latitudeInDegrees="42.3025391192385" longitudeInDegrees="-83.69779345760013" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=122.6563949584961 y=-216.5980682373047 yaw=124.6 -->
+            <Heading>124.6</Heading>
         </initialTSPI>
     </vehicle>
 
@@ -48,53 +48,42 @@
             <CARLA generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.299775" longitudeInDegrees="-83.697315" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=162.127304 y=91.973389 yaw=356 -->
-            <Heading>356</Heading>
+            <GeodeticPosition latitudeInDegrees="42.302606970366554" longitudeInDegrees="-83.69770537139738" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=129.908935546875 y=-224.15145874023438 yaw=143.06 -->
+            <Heading>143.06</Heading>
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="FHWA-SUMO-01" bsmid="f03ad628" type="vehicle.volkswagen.t2" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-TERASIM-01" bsmid="f03ad622" type="vehicle.audi.a2" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-SUMO-01" generate_bsms="true"/>
+            <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-TERASIM-01" generate_bsms="true"/>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.301177" longitudeInDegrees="-83.698684" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=49.363831 y=-65.975754 yaw=179 -->
-            <Heading>179</Heading>
+            <GeodeticPosition latitudeInDegrees="42.300766" longitudeInDegrees="-83.699090" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=15.871896 y=-19.251431 yaw=277.4 -->
+            <Heading>277.4</Heading>
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="FHWA-SUMO-02" bsmid="f03ad629" type="vehicle.mercedes-benz.coupe" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-TERASIM-02" bsmid="f03ad620" type="vehicle.bmw.isetta" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-SUMO-02" generate_bsms="true"/>
+            <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-TERASIM-02" generate_bsms="true"/>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.301152" longitudeInDegrees="-83.697944" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=110.320763 y=-63.196728 yaw=183 -->
-            <Heading>183</Heading>
+            <GeodeticPosition latitudeInDegrees="42.300373" longitudeInDegrees="-83.698457" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=68.050499 y=24.545536 yaw=2.04 -->
+            <Heading>2.04</Heading>
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="MCITY-TER-01" bsmid="f03ad622" type="vehicle.audi.a2" owner="CARLA-VW-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-AUTO-01" bsmid="f03ad620" type="vehicle.bmw.isetta" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARLA manual="true" generate_bsms="true"></CARLA>
+            <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-AUTO-01" generate_bsms="true"/>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.299832" longitudeInDegrees="-83.698467" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=67.368866 y=85.656593 yaw=351 -->
-            <Heading>351</Heading>
-        </initialTSPI>
-    </vehicle>
-
-    <vehicle name="MCITY-TER-02" bsmid="f03ad620" type="vehicle.bmw.isetta" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
-        <userData>
-            <CARLA manual="true" generate_bsms="true"></CARLA>
-        </userData>
-        <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.301407" longitudeInDegrees="-83.699016" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=22.569023 y=-91.464149 yaw=221 -->
-            <Heading>221</Heading>
+            <GeodeticPosition latitudeInDegrees="42.30264841495023" longitudeInDegrees="-83.69746440306264" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=149.74896240234375 y=-228.76519775390625 yaw=188.8 -->
+            <Heading>188.8</Heading>
         </initialTSPI>
     </vehicle>
 

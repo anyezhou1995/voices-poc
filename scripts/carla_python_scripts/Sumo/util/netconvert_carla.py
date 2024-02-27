@@ -32,13 +32,11 @@ import glob
 import os
 import sys
 
-try:
-    sys.path.append(
-        glob.glob('../../../PythonAPI/carla/dist/carla-*%d.%d-%s.egg' %
-                  (sys.version_info.major, sys.version_info.minor,
-                   'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
-except IndexError:
-    pass
+from find_carla_egg import find_carla_egg
+
+carla_egg_file = find_carla_egg()
+
+sys.path.append(carla_egg_file)
 
 # ==================================================================================================
 # -- find sumo modules -----------------------------------------------------------------------------
@@ -345,6 +343,7 @@ class SumoTrafficLight(object):
             'offset': str(self.offset)
         }
 
+        print(f'Generating TL XML for: {self.id}')
         xml_tag = ET.Element('tlLogic', info)
         for phase in self.phases:
             ET.SubElement(xml_tag, 'phase', {'state': phase.state, 'duration': str(phase.duration)})
@@ -412,6 +411,7 @@ def _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls=False):
 
     landmarks = carla_map.get_all_landmarks_of_type('1000001')
     for landmark in landmarks:
+        print(f'Checking Landmark: {landmark.id}')
         if landmark.name == '':
             # This is a workaround to avoid adding traffic lights without controllers.
             logging.warning('Landmark %s has not a valid name.', landmark.name)
@@ -419,8 +419,12 @@ def _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls=False):
 
         road_id = str(landmark.road_id)
         for from_lane, to_lane in landmark.get_lane_validities():
+            print(f'\tFrom Lane: {from_lane}')
+            print(f'\tTo Lane: {to_lane}')
             for lane_id in range(from_lane, to_lane + 1):
+                print(f'\tLane ID: {lane_id}')
                 if lane_id == 0:
+                    print(f'--> Skipping landmark {landmark.id} because lane_id == 0')
                     continue
 
                 wp = carla_map.get_waypoint_xodr(landmark.road_id, lane_id, landmark.s)
@@ -433,6 +437,7 @@ def _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls=False):
                 # When the landmark belongs to a junction, we place te traffic light at the
                 # entrance of the junction.
                 if wp.is_junction and sumo_topology.is_junction(road_id, lane_id):
+                    print(f'WP is junction')
                     tlid = str(wp.get_junction().id)
                     if tlid not in tls:
                         tls[tlid] = SumoTrafficLight(tlid)
@@ -457,6 +462,7 @@ def _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls=False):
                 # When the landmarks does not belong to a junction (i.e., belongs to a std road),
                 # we place the traffic light between that std road and its successor.
                 elif not wp.is_junction and not sumo_topology.is_junction(road_id, lane_id):
+                    print(f'\t\tWP is not junction')
                     from_edge, from_lane = sumo_topology.get_sumo_id(road_id, lane_id, landmark.s)
 
                     for to_edge, to_lane in sumo_topology.get_successors(from_edge, from_lane):
@@ -476,6 +482,8 @@ def _netconvert_carla_impl(xodr_file, output, tmpdir, guess_tls=False):
     parser = ET.XMLParser(remove_blank_text=True)
     tree = ET.parse(tmp_sumo_net, parser)
     root = tree.getroot()
+
+    print(f'Found TLS: {len(tls.values())}')
 
     for tl in tls.values():
         SumoTrafficLight.generate_default_program(tl)

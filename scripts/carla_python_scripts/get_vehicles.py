@@ -105,6 +105,7 @@ def main():
 
     try:
         world = client.get_world()
+        world_map = world.get_map()
         print("Available Maps: " + ', '.join(client.get_available_maps()))
         
         #world = client.load_world('/Game/Carla/Maps/Carla_v14_10_1_2021')
@@ -119,6 +120,8 @@ def main():
             print(vehicle)
             print("attributes: " + str(vehicle.attributes))
             print("vehicle transform: " + str(vehicle.get_transform()))
+            print("Lat/Long: " + str(world_map.transform_to_geolocation(vehicle.get_transform().location)))
+            print("")
 
 
         

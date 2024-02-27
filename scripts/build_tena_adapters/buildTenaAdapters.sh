@@ -256,7 +256,7 @@ elif [[ $tenaAppIndex == 10 ]]; then
 elif [[ $tenaAppIndex == 11 ]]; then
 	tenaApp=vug-v2xhub-bsm-plugin
 	gitCloneUrl="https://github.com/usdot-fhwa-stol/vug-v2xhub-bsm-plugin.git"
-	dockerContainer=usdotfhwaops/v2xhubamd:7.3.1
+	dockerContainer=usdotfhwaops/v2xhubamd:voices-pilot2-latest
 	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
 	isV2xhubPlugin=true
 	requiresProtocolio=false
@@ -266,7 +266,7 @@ elif [[ $tenaAppIndex == 11 ]]; then
 elif [[ $tenaAppIndex == 12 ]]; then
 	tenaApp=vug-v2xhub-spat-plugin
 	gitCloneUrl="https://github.com/usdot-fhwa-stol/vug-v2xhub-spat-plugin.git"
-	dockerContainer=usdotfhwaops/v2xhubamd:7.3.1
+	dockerContainer=usdotfhwaops/v2xhubamd:voices-pilot2-latest
 	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
 	isV2xhubPlugin=true
 	requiresProtocolio=false
@@ -276,7 +276,7 @@ elif [[ $tenaAppIndex == 12 ]]; then
 elif [[ $tenaAppIndex == 13 ]]; then
 	tenaApp=vug-v2xhub-mobility-plugin
 	gitCloneUrl="https://github.com/usdot-fhwa-stol/vug-v2xhub-mobility-plugin.git"
-	dockerContainer=usdotfhwaops/v2xhubamd:7.3.1
+	dockerContainer=usdotfhwaops/v2xhubamd:voices-pilot2-latest
 	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
 	isV2xhubPlugin=true
 	requiresProtocolio=false
@@ -286,7 +286,7 @@ elif [[ $tenaAppIndex == 13 ]]; then
 elif [[ $tenaAppIndex == 14 ]]; then
 	tenaApp=vug-v2xhub-traffic-control-plugin
 	gitCloneUrl="https://github.com/usdot-fhwa-stol/vug-v2xhub-traffic-control-plugin.git"
-	dockerContainer=usdotfhwaops/v2xhubamd:7.3.1
+	dockerContainer=usdotfhwaops/v2xhubamd:voices-pilot2-latest
 	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
 	isV2xhubPlugin=true
 	requiresProtocolio=false
@@ -604,7 +604,7 @@ echo "#### Running CMAKE ####"
 
 echo
 
-if ! ( set -x ; sudo docker run --entrypoint /bin/bash --rm -v $localAppDir:$remoteAppDir  -v $localInstallDir:$remoteInstallDir $dockerContainer -c "cd $remoteAppDir/build; export TENA_PLATFORM=$tenaBuildVersion; export TENA_HOME=$remoteTenaDir; export TENA_VERSION=6.0.8; export CARLA_HOME=$remoteCarlaDir; cmake -D CMAKE_EXPORT_COMPILE_COMMANDS=ON $buildVersionDirArg $buildVersionCmakeArg -D CMAKE_PREFIX_PATH='$remoteTenaDir/lib/cmake;$remoteInstallDir' -D VUG_INSTALL_DIR=$remoteInstallDir ../" ); then
+if ! ( set -x ; sudo docker run --entrypoint /bin/bash --rm -v $localAppDir:$remoteAppDir  -v $localInstallDir:$remoteInstallDir $dockerContainer -c "cd $remoteAppDir/build; export TENA_PLATFORM=$tenaBuildVersion; export TENA_HOME=$remoteTenaDir; export TENA_VERSION=6.0.8; export CARLA_HOME=$remoteCarlaDir; cmake -D CMAKE_EXPORT_COMPILE_COMMANDS=ON $buildVersionDirArg $buildVersionCmakeArg -D CMAKE_PREFIX_PATH='$remoteTenaDir/lib/cmake;$remoteInstallDir;/opt/carma/cmake' -D VUG_INSTALL_DIR=$remoteInstallDir -D tmx-plugin_DIR=/usr/local/share/tmx/ ../" ); then
 	echo
 	echo "[!!!] CMAKE FAILED"
 	exit

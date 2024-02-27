@@ -41,7 +41,7 @@ fi
 if [[ $VUG_DOCKER_START_SUMO == true ]]; then
    echo "STARTING SUMO"
    cd $HOME/voices-poc/scripts/carla_python_scripts/Sumo/
-   python3 $HOME/voices-poc/scripts/carla_python_scripts/Sumo/run_synchronization.py $HOME/voices-poc/scripts/carla_python_scripts/Sumo/$VUG_DOCKER_SUMO_CONFIG --sumo-gui --tls-manager carla &
+   python3 $HOME/voices-poc/scripts/carla_python_scripts/Sumo/run_synchronization.py $HOME/voices-poc/scripts/carla_python_scripts/Sumo/$VUG_DOCKER_SUMO_CONFIG --sumo-gui --tls-manager carla --carla-host $VUG_LOCAL_ADDRESS --sumo-host $VUG_LOCAL_ADDRESS &
    cd $HOME
    sleep 5s
 fi

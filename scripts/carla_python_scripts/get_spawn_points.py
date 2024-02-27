@@ -104,7 +104,7 @@ def main():
 
 
         for i_s,this_spawn_point in enumerate(spawn_points):
-            print(str(this_spawn_point.location))
+            print(f'{i_s}: {this_spawn_point.location}')
             this_location = carla.Location(this_spawn_point.location.x,
                                                    this_spawn_point.location.y,this_spawn_point.location.z)
             world.debug.draw_point( this_location,

@@ -1,10 +1,10 @@
 #
-# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build -t usdotfhwastoldev/voices:net-test-0.0.1 . --progress=plain -f carla-voices_Dockerfile
+# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build -t usdotfhwastoldev/carla-voices:pilot2-event2-0.0.3 . --progress=plain -f carla-voices_Dockerfile
 #
 
 FROM carlasim/carla:0.9.10
 
-LABEL version="0.0.1"
+LABEL version="0.0.3"
 LABEL description="VOICES Docker image for CARLA including event maps"
 
 SHELL ["/bin/bash", "-ec"]

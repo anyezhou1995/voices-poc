@@ -32,7 +32,6 @@ argparser.add_argument(
     help='Import file to read SignID output')
 args = argparser.parse_args()
 
-actor_list=[]
 try:
     client = carla.Client(args.host, args.port)
     client.set_timeout(5.0)
@@ -40,7 +39,8 @@ try:
     # map = world.get_map()
 
     # Get actor information (Traffic Lights)
-    traffic_light_list = world.get_actors().filter('traffic.traffic_light*')
+    traffic_light_list = world.get_actors().filter('traffic.*')
+    print(f'Found {len(traffic_light_list)} Traffic Lights')
 
     if args.file:
         print("Reading Actor ID and SignID association from: " + str(args.file))        
@@ -58,13 +58,13 @@ try:
                     # print(str(actorid_search_result))
                     signid_list[actorid_search_result] = signid_search_result
 
-        print("Actor ID : SignID: " + str(signid_list))
+        print("{Actor ID : SignID ...}: " + str(signid_list))
         
         for index, light in enumerate(traffic_light_list, start=1):
-            print(light.id)
+            print(f'{light.id} ({signid_list[str(light.id)]})')
             world.debug.draw_string(
                 light.get_location(), 
-                str(light.id) + " (" + str(signid_list[str(light.id)]) + ")", 
+                f'Actor: {light.id}, sign_id: {signid_list[str(light.id)]}', 
                 draw_shadow=False,
                 color=carla.Color(r=255, g=0, b=0), life_time=200,
                 persistent_lines=True)
@@ -74,10 +74,10 @@ try:
 
         # Print all index corresponding to all traffic lights in scene (CarlaUE4)
         for index, light in enumerate(traffic_light_list, start=1):
-            # print(light.id)
+            print(f'Drawing TL: {light}')
             world.debug.draw_string(
                 light.get_location(), 
-                str(light.id), 
+                f'Actor: {light.id}', 
                 draw_shadow=False,
                 color=carla.Color(r=255, g=0, b=0), life_time=200,
                 persistent_lines=True)
@@ -86,7 +86,4 @@ try:
     # Once you see all index number, you can manually change its states and timimg.
     # Your signal control scripts.
 finally:
-    print('Cleaning up actors...')
-    for actor in actor_list:
-        actor.destroy()
-    print('Done, Actors cleaned-up successfully!')
+    print('Cleaning up...')
