@@ -8,6 +8,10 @@ logs/
 #ignore all pycache
 **/__pycache__/
 
+#ignore all pcap and sqlite data files
+**.pcap
+**.sqlite
+
 #ignore scripts working dir
 scripts/carla_python_scripts/misc
 

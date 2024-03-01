@@ -5,3 +5,7 @@ source $HOME/.voices_scenario_config_link
 if [ $VUG_CONTAINER_IMAGE == "voices" ]; then
     source $VUG_TENA_SOURCE_SCRIPT_FILE
 fi
+
+if [[ ! -z $VUG_VPN_EM_ADDRESS ]]; then
+    export VUG_EM_ADDRESS=$VUG_VPN_EM_ADDRESS
+fi

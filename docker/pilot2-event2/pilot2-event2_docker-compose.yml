@@ -11,6 +11,8 @@ services:
       - VUG_CONTAINER_IMAGE=carla-voices
       - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
       - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
+      - VUG_VPN_LOCAL_ADDRESS=${VUG_VPN_LOCAL_ADDRESS}
+      - VUG_VPN_EM_ADDRESS=${VUG_VPN_EM_ADDRESS}
     env_file:
       - ${HOME}/.voices_site_config
       - ${HOME}/.voices_scenario_config
@@ -40,6 +42,8 @@ services:
       - VUG_CONTAINER_IMAGE=voices
       - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
       - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
+      - VUG_VPN_LOCAL_ADDRESS=${VUG_VPN_LOCAL_ADDRESS}
+      - VUG_VPN_EM_ADDRESS=${VUG_VPN_EM_ADDRESS}
     env_file:
       - ${HOME}/.voices_site_config
       - ${HOME}/.voices_scenario_config
@@ -47,6 +51,8 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${VUG_LOCAL_VOICES_POC_PATH}:/home/voices-poc
       - ${VUG_LOCAL_TENADEV_DIR}:/home/tenadev
+      - /dev/bus/usb:/dev/bus/usb
+    devices:
       - /dev/input:/dev/input
     deploy:
       resources:

@@ -176,7 +176,8 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         "x" : [],
         "y" : [],
         "z" : [],
-        "heading" : [],
+        "carla_heading" : [],
+        "geo_heading" : [],
         "latitude" : [],
         "longitude" : [],
         "altitude" : [],
@@ -268,11 +269,17 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         waypoint_data["y"].append(waypoint[0].transform.location.y)
         waypoint_data["z"].append(waypoint[0].transform.location.z)
 
-        waypoint_heading = waypoint[0].transform.rotation.yaw
-        if waypoint_heading < 0:
-            waypoint_heading = waypoint_heading + 360
+        carla_heading = waypoint[0].transform.rotation.yaw
+        while int(carla_heading) < 0:
+            carla_heading = carla_heading + 360
             
-        waypoint_data["heading"].append(waypoint_heading)
+        waypoint_data["carla_heading"].append(carla_heading)
+        
+        geo_heading = carla_heading - 90
+        while int(geo_heading) < 0:
+            geo_heading = geo_heading + 360
+
+        waypoint_data["geo_heading"].append(geo_heading)
 
         w_geo = map.transform_to_geolocation(waypoint[0].transform.location)
 
@@ -408,11 +415,7 @@ try:
 
                 this_spawn["waypoints"].append(new_waypoint)
                 
-
             print(f'this_spawn: {this_spawn}')    
-
-
-            
 
             new_event2_spawns.append(this_spawn)
 

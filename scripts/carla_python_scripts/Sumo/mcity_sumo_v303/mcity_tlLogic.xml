@@ -6,8 +6,8 @@
         <phase duration="999" state="OOOOOO"/>
         <param key="linkSignalID:0" value="656"/>
         <param key="linkSignalID:1" value="656"/>
-        <param key="linkSignalID:2" value="9957"/>
-        <param key="linkSignalID:3" value="9957"/>
+        <param key="linkSignalID:2" value="663"/>
+        <param key="linkSignalID:3" value="663"/>
         <param key="linkSignalID:4" value="658"/>
         <param key="linkSignalID:5" value="658"/>
     </tlLogic>

@@ -25,12 +25,17 @@ if [[ $VUG_DOCKER_START_CARLA == true ]]; then
 	python3 $HOME/voices-poc/scripts/carla_python_scripts/config.py -m $VUG_CARLA_MAP_NAME --weather ClearNoon --host $VUG_CARLA_ADDRESS &
 
    sleep 5s
-
-   # blank signals
-   python3 $HOME/voices-poc/scripts/carla_python_scripts/blank_traffic_signals.py --host $VUG_CARLA_ADDRESS & 
+   
+   if [[ $VUG_CARLA_BLANK_SIGNALS == true ]]; then
+      # blank signals
+      python3 $HOME/voices-poc/scripts/carla_python_scripts/blank_traffic_signals.py --host $VUG_CARLA_ADDRESS & 
+   fi
 
    # set spectator view
-   python3 $HOME/voices-poc/scripts/carla_python_scripts/spectator_view_mcity.py --host $VUG_CARLA_ADDRESS &
+   if [[ $VUG_CARLA_MAP_NAME == *"mcity"* ]]; then
+      python3 $HOME/voices-poc/scripts/carla_python_scripts/spectator_view_mcity.py --host $VUG_CARLA_ADDRESS &
+   fi
+  
 
    # display vehicle names
    python3 $HOME/voices-poc/scripts/carla_python_scripts/display_vehicle_rolenames.py --host $VUG_CARLA_ADDRESS -d 0 &

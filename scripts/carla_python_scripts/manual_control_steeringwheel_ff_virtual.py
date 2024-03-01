@@ -132,7 +132,7 @@ def get_actor_display_name(actor, truncate=250):
 
 
 class World(object):
-    def __init__(self, carla_world, hud, actor_filter):
+    def __init__(self, carla_world, hud, actor_filter,args):
         self._actor_filter = actor_filter
         
         self.world = carla_world
@@ -153,11 +153,13 @@ class World(object):
             #spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
             #self.player = self.world.try_spawn_actor(blueprint, spawn_point)
             carlaVehicles = self.world.get_actors().filter('vehicle.*')
-            #self.player = carlaVehicles[1]
             for vehicle in carlaVehicles:
                 currentAttributes = vehicle.attributes
-                if currentAttributes["role_name"] == "CARLA-MANUAL-1":
-            	    self.player = vehicle
+                print("Checking vehicle: " + str(currentAttributes["role_name"]))
+                if currentAttributes["role_name"] == args.follow_vehicle:
+                    self.player = vehicle
+            if not self.player:
+                print("ERROR: Unable to find vehicle with rolename: " + args.follow_vehicle)
 
 #        while self.player is None:
 #            for event in pygame.event.get():
@@ -357,7 +359,7 @@ class DualControl(object):
         self._hudToggle_idx = int(self._parser.get('G29 Racing Wheel', 'hudToggle'))
 	
         
-    def parse_events(self, world, clock):
+    def parse_events(self, world, clock, args):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return True
@@ -441,7 +443,7 @@ class DualControl(object):
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
                 self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
-                self._parse_vehicle_wheel()
+                self._parse_vehicle_wheel(world,args)
                 self._parse_speedToWheel(world)
                 self._control.reverse = self._control.gear < 0
             elif isinstance(self._control, carla.WalkerControl):
@@ -488,7 +490,7 @@ class DualControl(object):
         vPos = jsInputs[1]
         world.camera_manager.toggle_camera(horizPos=hPos, vertiPos=vPos)
 
-    def _parse_vehicle_wheel(self):
+    def _parse_vehicle_wheel(self, world, args):
         numAxes = self._joystick.get_numaxes()
         jsInputs = [float(self._joystick.get_axis(i)) for i in range(numAxes)]
         jsButtons = [float(self._joystick.get_button(i)) for i in
@@ -507,8 +509,10 @@ class DualControl(object):
 
         K2 = 1.6  # 1.6
 
+        v = world.player.get_velocity()
+        speed = (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
 
-        if (jsInputs[self._throttle_idx] == 0.0):
+        if (jsInputs[self._throttle_idx] == 0.0 or speed > args.speed_limit ):
             throttleCmd = 0
         else:
             throttleCmd = K2 + (2.05 * math.log10(-0.7 * jsInputs[self._throttle_idx] + 1.4) - 1.2) / 0.92
@@ -1161,7 +1165,7 @@ def game_loop(args):
             SCREEN_MODE)
 
         hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args.filter)
+        world = World(client.get_world(), hud, args.filter,args)
         controller = DualControl(world, args.autopilot)
 
         clock = pygame.time.Clock()
@@ -1169,7 +1173,7 @@ def game_loop(args):
         while True:
             clock.tick_busy_loop(60)
             ##GameTime.get_time() - self._start_time
-            if controller.parse_events(world, clock):
+            if controller.parse_events(world, clock, args):
                 break
             if not world.tick(clock):
                 break
@@ -1232,6 +1236,16 @@ def main():
         '--fullscreen',
         action='store_true',
         help='enable fullscreen mode')
+    argparser.add_argument(
+        '--follow_vehicle',
+        default="TFHRC-MANUAL-1",
+        help='Vehicle to be used for the follow cam (default: "TFHRC-MANUAL-1"')
+    argparser.add_argument(
+        '-s', '--speed_limit',
+        metavar='S',
+        default=50,
+        type=int,
+        help='Speed limit for manual vehicle in kph (default: 50 kph)')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
