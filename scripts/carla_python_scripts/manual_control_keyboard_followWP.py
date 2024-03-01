@@ -227,8 +227,9 @@ class World(object):
                     sys.exit(1)
                 spawn_points = self.map.get_spawn_points()
                 spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-                spawn_point = carla.Transform(carla.Location(x=52.122, y=2.986, z=237.5), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
-                spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                #spawn_point = carla.Transform(carla.Location(x=52.122, y=2.986, z=237.5), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                #spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                spawn_point = carla.Transform(carla.Location(x=129.91, y=-224.152, z=244.222+2), carla.Rotation(pitch=0.932, yaw=141.25, roll=-0.031))
 
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
@@ -1114,12 +1115,13 @@ def game_loop(args):
         display = pygame.display.set_mode(
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
-
+        '''
         UDP_IP = "10.7.108.81"
         UDP_PORT = 5398
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((UDP_IP, UDP_PORT))
+        '''
 
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
@@ -1131,7 +1133,7 @@ def game_loop(args):
 
         wp_id_cache, wp_id = 0, 0
 
-        df_waypoints = pd.read_csv('./ORNL_waypoints.csv')
+        df_waypoints = pd.read_csv('./ORNL_breadcrumbs.csv')
         cx, cy, cz = df_waypoints['x'].to_numpy(), df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
 
         #spatCache = {}
@@ -1147,14 +1149,14 @@ def game_loop(args):
 
         while True:
             clock.tick_busy_loop(60)
-
+            '''
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
             hex_data = data.hex()
             # Loop: a sub-process for info? another node to make sure data coming in
 
             reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
             SPaT_flag, spatInfo = process_SPaT(hex_data)
-
+            '''
             #ref_trans = world.player.get_transform()
             ref_rotation = world.player.get_transform().rotation
             
@@ -1168,10 +1170,11 @@ def game_loop(args):
                     print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
                     ref_trans = actor.get_transform()
             '''
+            '''
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
             hex_data = data.hex()
             BSM_flag, x1, y1, speed = process_BSM(hex_data)
-
+            
             if BSM_flag is True:
                 speed_cache = speed
             elif BSM_flag is False and speed <= 0.1:
@@ -1179,7 +1182,8 @@ def game_loop(args):
 
             #if BSM_flag is True:
                 #print('BSM: ', BSM_flag, x1, y1, speed)
-            
+            '''
+
             for actor in actor_list:
                 #print(actor.id, actor.type_id)
                 #if actor.type_id == 'vehicle.toyota.prius':
@@ -1191,11 +1195,11 @@ def game_loop(args):
                     #print(actor.attributes)
                     #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                     break
-
+            '''
             if BSM_flag is True:
                 #print('############ Carla map difference: ', x-x1, y-y1, '############')
                 pass
-
+            '''
             '''
             if not BSM_flag:
                 for actor in actor_list:
@@ -1207,10 +1211,11 @@ def game_loop(args):
                         #print('UCLA: ', actor.id, x, y, speed)
 
             '''
-
+            
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
+            '''
             spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
             dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
             speed_diff = speed - speed_ego
@@ -1253,13 +1258,18 @@ def game_loop(args):
             print(spatCache)
             print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
             print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; To stopbar: ', dist2bar, '--------------------------')
-            
+            '''
+
             #print(controller.eco_drive)
             #speed2go = 3.6*speed
 
             ## To compensate early start in recorded testing scenario
             #if spacing >= 2 and speed_diff >= 1 and RefSpd<=0.1:
                 #RefSpd = speed*3.6/1.6
+
+
+            uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, 20*3.6/1.6, 50*3.28)
+            RefSpd = min(25, RefSpd)
 
             ## Get the desired waypoint
             if controller.eco_drive:
@@ -1271,27 +1281,34 @@ def game_loop(args):
             ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
             
             speed2go = RefSpd*1.6
+            '''
             # collision consideration
             if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
                 #controller._control.brake = 0.99
+                speed2go = 0
+            '''
+            if speed2go/3.6<0.1 or wp_id >= len(cx)-1:
                 speed2go = 0
 
             if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
                 return
 
-            #print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
-            #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
+            print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
+            print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
             #print('Ref pos: ' + str(ref_trans.location.x) + ', ' + str(ref_trans.location.y))
 
             world.tick(clock)
             world.render(display)
             pygame.display.flip()
 
+            '''
             if run_step%record_freq == 0:
                 last_dist2bar = dist2bar
+            '''
 
             ego_speed_buffer.append(speed_ego)
-            Data4JH.append(dataToSave)
+            
+            #Data4JH.append(dataToSave)
 
             #draw_box(world.world, x1, y1, 240)
 

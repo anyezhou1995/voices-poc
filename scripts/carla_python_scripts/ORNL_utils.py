@@ -1,7 +1,8 @@
 import pandas as pd
 import time
 from datetime import datetime
-from speed_control_algorithm import gen_desired_spd
+#from speed_control_algorithm import gen_desired_spd
+from speed_control_implementation_ggg import gen_desired_spd, IntelligentDriverModel
 from configparser import ConfigParser
 import J2735_201603_combined_voices_mr_fix as J2735
 import socket
@@ -430,22 +431,38 @@ def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, refere
 
     if SpatData != 0:
         current_time = datetime.now()
+        ########################################### This offset 5180s is only for local testing################################################
         current_time_rel = (current_time.hour * 3600 + current_time.minute * 60 + current_time.second) - \
-                           ((reference_timestamp.hour * 60 + reference_timestamp.minute) * 60 + reference_timestamp.second)
+                           ((reference_timestamp.hour * 60 + reference_timestamp.minute) * 60 + reference_timestamp.second) + 5180
+        current_time_rel = SpatData['currentTime']
 
-        queue_length, instant_desired_speed, mode, a_out = gen_desired_spd(example_coasting_profile, A, B, C, M,
-                                                                           orginal_desire_spd, next_movement, cav_spd, cav_acc,
-                                                                           current_time_rel, dist2Stop,
-                                                                           precedSpeed, gapDist, 2,
-                                                                           FlowData['flow_rate'], FlowData['speed_agg'],
-                                                                           SpatData['status'], SpatData['t1s'],
-                                                                           SpatData['t1e'], SpatData['t2s'],
-                                                                           SpatData['t2e'], SpatData['r1s'])
+        data_toSave = [cav_spd, cav_acc,
+                        current_time_rel, dist2Stop,
+                        precedSpeed, gapDist, 2,
+                        FlowData['flow_rate'], FlowData['speed_agg'],
+                        SpatData['status'], SpatData['t1s'],
+                        SpatData['t1e'], SpatData['t2s'],
+                        SpatData['t2e'], SpatData['r1s']]
+        
+        with open('./data4Debug_2.txt', 'a') as t:
+            t.write(json.dumps(data_toSave) + '\n')
+        try:
+            queue_length, instant_desired_speed, mode, a_out = gen_desired_spd(example_coasting_profile, A, B, C, M,
+                                                                               orginal_desire_spd, next_movement, cav_spd, cav_acc,
+                                                                               current_time_rel, dist2Stop,
+                                                                               precedSpeed, gapDist, 2,
+                                                                               FlowData['flow_rate'], FlowData['speed_agg'],
+                                                                               SpatData['status'], SpatData['t1s'],
+                                                                               SpatData['t1e'], SpatData['t2s'],
+                                                                               SpatData['t2e'], SpatData['r1s'])
+        except:
+            return 0, data_toSave, 1
 
-        #print('current time: {}, \ncurrent speed: {}, \nqueue_length: {}, \ninstant_desired_speed: {}, \nmode: {}, \nfollow_distance: {}\n'.
-              #format(int(current_time_rel), int(cav_spd), int(queue_length), int(instant_desired_speed), mode, gapDist))
+        #print('Before mod:', current_time_rel - 5180)
+        print('current time: {}, \ncurrent speed: {}, \nqueue_length: {}, \ninstant_desired_speed: {}, \nmode: {}, \nfollow_distance: {}\n'.
+              format(int(current_time_rel), int(cav_spd), int(queue_length), int(instant_desired_speed), mode, gapDist))
 
-        #print('\n----------------------------------------------------------------------------------------------------')
+        print('\n----------------------------------------------------------------------------------------------------')
 
         data = {'cpu_time': time.time(), "x_ntl": dist2Stop, "clr_ntl": SpatData['status'],
                 "v_advisory": instant_desired_speed, "a_advisory": a_out, 'mode': mode}
@@ -462,7 +479,7 @@ def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, refere
 
     #print(data)
 
-    return data['v_advisory']
+    return data['v_advisory'], data_toSave, 0
 
 
 def find_closest_waypoint(wp_list, ego_transform, speed, start_id):
