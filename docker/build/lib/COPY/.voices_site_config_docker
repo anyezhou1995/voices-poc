@@ -10,6 +10,28 @@ export VUG_LOCAL_VOICES_POC_PATH=$HOME/voices-poc
 export VUG_LOG_FILES_ROOT=$VUG_LOCAL_VOICES_POC_PATH/logs
 export VUG_LOCAL_CARLA_PATH=$HOME/CARLA_0.9.10
 
+# if we have a VUG_VPN_LOCAL_ADDRESS, we must be using the VPN,
+#   - overwrite the VUG_LOCAL_ADDRESS with the new VUG_VPN_LOCAL_ADDRESS
+#   - re-export all config that used the old VUG_LOCAL_ADDRESS with the new VUG_VPN_LOCAL_ADDRESS
 if [[ ! -z $VUG_VPN_LOCAL_ADDRESS ]]; then
     export VUG_LOCAL_ADDRESS=$VUG_VPN_LOCAL_ADDRESS
+
+    config_path="$VUG_LOCAL_VOICES_POC_PATH/config/site_config/$VUG_SITE_CONFIG_FILE"
+
+    mapfile -t site_config_lines < $config_path
+    config_line_count=$(wc -l < "$config_path")
+
+    line_index=0
+    while (( $line_index <= config_line_count )); do
+        
+        config_line=${site_config_lines[line_index]}
+        
+        if [[ $config_line == *'$VUG_LOCAL_ADDRESS' ]]; then
+            env_var_to_fix=${config_line%'$VUG_LOCAL_ADDRESS'}
+            updated_export_cmd=$env_var_to_fix$VUG_VPN_LOCAL_ADDRESS
+            $updated_export_cmd
+        fi
+
+        ((line_index+=1))
+    done
 fi

@@ -276,7 +276,7 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         waypoint_data["carla_heading"].append(carla_heading)
         
         geo_heading = carla_heading - 90
-        while int(geo_heading) < 0:
+        while geo_heading < 0:
             geo_heading = geo_heading + 360
 
         waypoint_data["geo_heading"].append(geo_heading)

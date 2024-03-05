@@ -6,6 +6,29 @@ if [ $VUG_CONTAINER_IMAGE == "voices" ]; then
     source $VUG_TENA_SOURCE_SCRIPT_FILE
 fi
 
+# if we have a VUG_VPN_EM_ADDRESS, we must be using the VPN,
+#   - overwrite the VUG_EM_ADDRESS with the new VUG_VPN_EM_ADDRESS
+#   - re-export all config that used the old VUG_LOCAL_ADDRESS with the new VUG_VPN_LOCAL_ADDRESS
 if [[ ! -z $VUG_VPN_EM_ADDRESS ]]; then
+
+    config_path="$VUG_LOCAL_VOICES_POC_PATH/config/scenario_config/$VUG_SCENARIO_CONFIG_FILE"
+
+    mapfile -t config_lines < $config_path
+    config_line_count=$(wc -l < "$config_path")
+
+    line_index=0
+    while (( $line_index <= config_line_count )); do
+        
+        config_line=${config_lines[line_index]}
+        
+        if [[ $config_line == *'$VUG_LOCAL_ADDRESS' ]]; then
+            env_var_to_fix=${config_line%'$VUG_LOCAL_ADDRESS'}
+            updated_export_cmd=$env_var_to_fix$VUG_VPN_LOCAL_ADDRESS
+            $updated_export_cmd
+        fi
+
+        ((line_index+=1))
+    done
+
     export VUG_EM_ADDRESS=$VUG_VPN_EM_ADDRESS
 fi
