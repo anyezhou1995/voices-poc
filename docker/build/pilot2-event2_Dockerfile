@@ -1,10 +1,10 @@
 #
-# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build -t usdotfhwastoldev/voices:pilot2-event2-0.0.5 . --progress=plain -f pilot2-event2_Dockerfile
+# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build --build-arg version=0.0.7 -t usdotfhwastoldev/voices:pilot2-event2-0.0.7 . --progress=plain -f pilot2-event2_Dockerfile
 #
 
 FROM ubuntu:20.04
 
-LABEL version="0.0.5"
+LABEL version=${VERSION}
 LABEL description="VOICES Docker image for Pilot 2 Event 2"
 
 SHELL ["/bin/bash", "-ec"]
