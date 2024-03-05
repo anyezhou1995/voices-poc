@@ -339,6 +339,7 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
     seconds = spatTimestamp/1000
     currentTime = '{}:{}:{}'.format(hour, minute, seconds)
     currentTimestamp = datetime.strptime(currentTime, '%H:%M:%S.%f')
+    print('#####Current Time: ', currentTimestamp)
     currentTimeReference = (currentTimestamp.hour * 3600 + currentTimestamp.minute * 60 + currentTimestamp.second) - \
                            ((reference_timestamp.hour * 60 + reference_timestamp.minute) * 60 + reference_timestamp.second)
     instersectionPhaseArray = decoded_msg()['value'][1]['intersections'][0]['states']
@@ -362,7 +363,7 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
 
         #print(phase, spatPhaseArray)
 
-    #assume we are approaching phase 2, otherwise, it need to be determined based on MAP data.
+    #assume we are approaching phase 2/4, otherwise, it need to be determined based on MAP data.
     phase2State = spatPhaseArray[2]
     phase2Status = phase2State['state']
     phaseStatusDict = {'protected-Movement-Allowed': 'green',

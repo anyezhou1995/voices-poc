@@ -1187,13 +1187,14 @@ def game_loop(args):
             for actor in actor_list:
                 #print(actor.id, actor.type_id)
                 #if actor.type_id == 'vehicle.toyota.prius':
-                if actor.attributes['role_name'] == 'UCLA-MAN-1':
+                if actor.attributes['role_name'] == 'FHWA-MAN-3':
                     # Use actual name
                     ref_trans1 = actor.get_transform()
                     x, y = ref_trans1.location.x, ref_trans1.location.y
                     ref_rotation = actor.get_transform().rotation
-                    #print(actor.attributes)
-                    #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
+                    speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
+                    print(actor.attributes)
+                    print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                     break
             '''
             if BSM_flag is True:
@@ -1215,6 +1216,7 @@ def game_loop(args):
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
+            spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
             '''
             spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
             dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
@@ -1268,8 +1270,8 @@ def game_loop(args):
                 #RefSpd = speed*3.6/1.6
 
 
-            uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, 20*3.6/1.6, 50*3.28)
-            RefSpd = min(25, RefSpd)
+            uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
+            RefSpd = min(15, RefSpd)
 
             ## Get the desired waypoint
             if controller.eco_drive:
@@ -1293,8 +1295,8 @@ def game_loop(args):
             if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
                 return
 
-            print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
-            print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
+            #print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
+            #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
             #print('Ref pos: ' + str(ref_trans.location.x) + ', ' + str(ref_trans.location.y))
 
             world.tick(clock)

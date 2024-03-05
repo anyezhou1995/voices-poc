@@ -1289,7 +1289,7 @@ def gen_desired_spd(example_coasting_profile, A, B, C, M, orginal_desire_spd, ne
     #                                     0.75, 0.5, vehicle_current_speed,
     #                                     desired_speed, minimum_desired_speed, queue_coast, distance2stopbar, a_comfort, orginal_desire_spd, green_window4coast, simsec, maximum_deceleration)
 
-    mode, instant_desired_speed, a_out = coasting4instant_desired_spd_toyota_v4(A, B, C, M, 2296.59, 1312.34,
+    mode, instant_desired_speed, a_out = coasting4instant_desired_spd_toyota_v4(A, B, C, M, 360, 230,
                                         0.75, 0.5, vehicle_current_speed, current_acceleration,
                                         desired_speed, max(desired_speed - 1, 0), queue_coast, distance2stopbar, a_comfort, orginal_desire_spd, green_window4coast, simsec, SigState, maximum_deceleration, acc_speed_base, acc_dist, example_coasting_profile)
 
