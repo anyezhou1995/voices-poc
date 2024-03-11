@@ -110,7 +110,6 @@ def main():
 
     try:
         world = client.get_world()
-        print("Available Maps: " + ', '.join(client.get_available_maps()))
         
         #world = client.load_world('/Game/Carla/Maps/Carla_v14_10_1_2021')
         #world = client.get_world()
@@ -124,13 +123,16 @@ def main():
         else:
             vehicles_to_exclude = []
 
-        while True:
+        max_checks = 60
+
+
+        for i in range(max_checks):
 
             vehicles = world.get_actors().filter('vehicle.*')
 
             stopped_vehicles = []
 
-            print("Checking for new vehicles to stop...")
+            print(f"Checking for new vehicles to stop [{max_checks - i}]")
 
             for vehicle in vehicles:
                 
@@ -162,22 +164,6 @@ def main():
                     vehicle.apply_control(veh_control)
 
             time.sleep(1)
-                
-
-
-        
-        #print(world.get_actors().find(102))
-        #print("TrafficLights:" + ', '.join(trafficlights))
-        #print(dir(trafficlights[0]))
-        #for light in trafficlights:
-            #print(light.get_group_traffic_lights())
-            
-            
-        # blueprints = [bp for bp in world.get_blueprint_library().filter('vehicle.*')]
-        # for blueprint in blueprints:
-        #     print(blueprint.id)
-        #     for attr in blueprint:
-        #         print('  - {}'.format(attr))
 
     finally:
 

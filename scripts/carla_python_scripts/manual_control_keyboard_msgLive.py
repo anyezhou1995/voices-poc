@@ -1230,7 +1230,7 @@ def game_loop(args):
 
             print(dist2bar)
             
-            if spacing > 75 or np.isnan(speed):
+            if spacing > 75 or spacing < 0 or np.isnan(speed):
                 speed = np.nan
                 spacing = np.nan
 
@@ -1257,7 +1257,7 @@ def game_loop(args):
                     else:
                         print('Do CF', speed_ego, speed, spacing)
                         uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
-                    RefSpd = min(20, RefSpd)
+                    RefSpd = min(25, RefSpd) #11 for Mcity
                     cache_time = datetime.datetime.now().timestamp()
             except:
                 print('------------------------Cannot get advisory speed!!!------------------------')

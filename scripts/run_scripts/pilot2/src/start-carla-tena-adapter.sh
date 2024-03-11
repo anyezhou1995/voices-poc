@@ -55,6 +55,11 @@ localadapterPath=$VUG_LOCAL_INSTALL_PATH/$VUG_CARLA_ADAPTER_VERSION
 
 adapterVerbosity='1'
 
+
+echo "----- STARTING VEHICLE E-BRAKE SCRIPT -----"
+
+python3 $VUG_LOCAL_VOICES_POC_PATH/scripts/carla_python_scripts/stop_vehicles.py &
+
 mkdir -p $VUG_ADAPTER_LOG_PATH
 
 adapterLogFile=$VUG_ADAPTER_LOG_PATH/carla_adapter_terminal_out.log

@@ -12,6 +12,8 @@ services:
       - VUG_CONTAINER_IMAGE=voices
       - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
       - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
+      - VUG_VPN_LOCAL_ADDRESS=${VUG_VPN_LOCAL_ADDRESS}
+      - VUG_VPN_EM_ADDRESS=${VUG_VPN_EM_ADDRESS}
     env_file:
       - ${HOME}/.voices_site_config
       - ${HOME}/.voices_scenario_config

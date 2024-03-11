@@ -13,9 +13,10 @@
 
   <vehicles>
 
-    <vehicle name="FHWA_CAR_3" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="carma_1" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARLA manual="true" generate_bsms="false"></CARLA>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="carma_1"/>
+            <!-- <CARLA manual="true" generate_bsms="false"></CARLA> -->
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>

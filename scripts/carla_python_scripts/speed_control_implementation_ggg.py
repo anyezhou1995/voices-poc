@@ -1238,8 +1238,9 @@ def gen_desired_spd(example_coasting_profile, A, B, C, M, orginal_desire_spd, ne
         # adjusting queue length using ACC radar detection information
         # if not np.isnan(acc_dist):
         if acc_dist != 'None' and not np.isnan(acc_dist): # udpate based on ACC function.
-            queue_length_w1 = queue_update_acc(radar_detection_range, queue_len_per_vehicle, queue_length_w1, distance2stopbar, vehicle_current_speed, acc_speed_base, acc_dist, SigState)
+            #queue_length_w1 = queue_update_acc(radar_detection_range, queue_len_per_vehicle, queue_length_w1, distance2stopbar, vehicle_current_speed, acc_speed_base, acc_dist, SigState)
             # print('ACC updated')
+            pass
         else:
             pass
 
