@@ -1,5 +1,5 @@
 #
-# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build --build-arg version=0.0.7 -t usdotfhwastoldev/carla-voices:pilot2-event2-0.0.7 . --progress=plain -f carla-voices_Dockerfile
+# BUILD COMMAND: VERSION=0.0.8 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t usdotfhwastoldev/carla-voices:pilot2-event2-$VERSION . --progress=plain -f carla-voices_Dockerfile
 #
 
 FROM carlasim/carla:0.9.10
@@ -24,6 +24,15 @@ COPY ../lib/COPY/.voices_scenario_config_docker /home/carla/.voices_scenario_con
 COPY ../lib/COPY/VOICES_Limited_License_V0.2.pdf /home/carla/VOICES_Limited_License_V0.2.pdf
 
 USER root
+
+# remove cuda and nvidia sources as we are not updating them
+RUN rm /etc/apt/sources.list.d/cuda.list && \
+    rm /etc/apt/sources.list.d/nvidia-ml.list && \
+    apt-get update && \
+    # add vulkan-utils to fix crashing 
+    apt install -y vulkan-utils && \
+    # cleanup apt lists
+    rm -rf /var/lib/apt/lists/*
 
 RUN chmod a+x -R /home/carla/start_scripts/*
 

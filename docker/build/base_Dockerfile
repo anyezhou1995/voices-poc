@@ -1,5 +1,5 @@
 #
-# BUILD COMMAND: sudo DOCKER_BUILDKIT=1 docker build -t usdotfhwastoldev/voices:base-0.0.1 . --progress=plain -f base_Dockerfile
+# BUILD COMMAND: VERSION=0.0.1 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t usdotfhwastoldev/voices:base-$VERSION . --progress=plain -f base_Dockerfile
 #
 
 FROM ubuntu:20.04

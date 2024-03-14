@@ -29,6 +29,9 @@ elif [[ $VUG_CARLA_QUALITY_LEVEL == "Low" ]]; then
    carla_graphics_quality_arg="-quality-level=Low"
 fi
 
+# adding this somehow prevents a carla memory crash: https://github.com/carla-simulator/carla/issues/2138
+vulkaninfo &> /dev/null
+
 echo "STARTING CARLA"
 /bin/bash /home/carla/CarlaUE4.sh $carla_graphics_api_arg $carla_graphics_quality_arg -nosound &
 

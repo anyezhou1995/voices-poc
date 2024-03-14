@@ -127,13 +127,20 @@ if [[ $VUG_DOCKER_START_MANUAL_CARLA_VEHICLE == true ]]; then
    # if we are starting the carla adapter and a manual vehicle, we almost certainly are trying to use a vehicle from the scenario which should already be spawined
    if [[ $VUG_DOCKER_MANUAL_CARLA_VEHICLE_IS_NEW == true ]]; then
       echo "   SPAWNING NEW MANUAL VEHICLE"
-      python3 $HOME/voices-poc/scripts/carla_python_scripts/manual_control_keyboard.py --rolename $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS &
+      python3 $HOME/voices-poc/scripts/carla_python_scripts/manual_control_keyboard.py --rolename $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS --speed_limit $VUG_MANUAL_VEHICLE_SPEED_LIMIT &
 
    else
       echo "   CONNECTING TO SCENARIO MANUAL VEHICLE"
-      python3 $HOME/voices-poc/scripts/carla_python_scripts/manual_control_keyboard_virtual.py --follow_vehicle $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS &
+      python3 $HOME/voices-poc/scripts/carla_python_scripts/manual_control_keyboard_virtual.py --follow_vehicle $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS --speed_limit $VUG_MANUAL_VEHICLE_SPEED_LIMIT &
 
    fi
+
+   sleep 5s
+fi
+
+if [[ $VUG_COLLECT_ECO_DATA == true ]]; then
+   echo "STARTING ECO DATA COLLECTOR"
+   python3 $HOME/voices-poc/scripts/carla_python_scripts/collect_pilot2_vehicle_eco_data.py --vehicle_rolenames $VUG_COLLECT_ECO_DATA_ROLENAMES &
 
    sleep 5s
 fi
