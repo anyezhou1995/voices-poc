@@ -1142,7 +1142,7 @@ def game_loop(args):
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
 
         traffic_light_list = world.world.get_actors().filter('traffic.*')
-        print(f'Found {len(traffic_light_list)} Traffic Lights')
+        #print(f'Found {len(traffic_light_list)} Traffic Lights')
 
         for index, light in enumerate(traffic_light_list, start=1):
             print(f'{light.id}')
@@ -1155,142 +1155,156 @@ def game_loop(args):
 
         clock = pygame.time.Clock()
 
+        ref_rotation = world.player.get_transform().rotation
+        speed2go, ref_trans = 0, carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
         run_step = 0
 
         while True:
             clock.tick_busy_loop(60)
 
-            data, addr = sock.recvfrom(4096)
-            hex_data = data.hex()
-            print(hex_data)
-            # Loop: a sub-process for info? another node to make sure data coming in
-
-            reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
-            SPaT_flag, spatInfo = process_SPaT(hex_data)
-
-            #ref_trans = world.player.get_transform()
-            ref_rotation = world.player.get_transform().rotation
-            
-            actor_list = world.world.get_actors()
-            actor_list = actor_list.filter('vehicle.*')
-
-            '''
-            for actor in actor_list:
-                #print(actor.id, actor.type_id)
-                if actor.type_id == 'vehicle.bmw.isetta':
-                    print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
-                    ref_trans = actor.get_transform()
-            '''
-            #data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
-            #hex_data = data.hex()
-            BSM_flag, x1, y1, speed = process_BSM(hex_data)
-
-            if BSM_flag is True:
-                speed_cache = speed
-            elif BSM_flag is False and speed <= 0.1:
-                speed = speed_cache
-
-            #if BSM_flag is True:
-                #print('BSM: ', BSM_flag, x1, y1, speed)
-            
-            for actor in actor_list:
-                #print(actor.id, actor.type_id)
-                #if actor.type_id == 'vehicle.toyota.prius':
-                if actor.attributes['role_name'] == 'UCLA-OPENCDA':                        ######Don't forget to add UCLA-OPENCDA/ANL back######
-                    # Use actual name
-                    ref_trans1 = actor.get_transform()
-                    x, y = ref_trans1.location.x, ref_trans1.location.y
-                    ref_rotation = actor.get_transform().rotation
-                    #print(actor.attributes)
-                    #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
-                    break
-
-            if BSM_flag is True:
-                #print('############ Carla map difference: ', x-x1, y-y1, '############')
-                pass
-
-            '''
-            if not BSM_flag:
-                for actor in actor_list:
-                #print(actor.id, actor.type_id)
-                    if actor.type_id == 'vehicle.bmw.isetta':
-                        ref_trans = actor.get_transform()
-                        x, y = ref_trans.location.x, ref_trans.location.y
-                        #speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
-                        #print('UCLA: ', actor.id, x, y, speed)
-
-            '''
-
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
-            spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4
             dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2)
-            speed_diff = speed - speed_ego
-
-            print(dist2bar)
             
-            if spacing > 75 or spacing < 0 or np.isnan(speed):
-                speed = np.nan
-                spacing = np.nan
-
-            if controller.eco_drive and pass_or_not == 0 and round(last_dist2bar,2) < round(dist2bar,2):
-                pass_or_not = 1
-
-            if spatInfo != {}:
-                spatCache = spatInfo
-                #print(spatInfo)
-            #elif spatInfo == {} and RefSpd >= 0.2:
-            else:
-                pass
-                #print('########################## Use previous SPaT! ##########################')
-                # RefSpd = speed*3.6/1.6
-
-            try:
-                current_update_time = datetime.datetime.now().timestamp()
-                dt = current_update_time - cache_time
-
-                if dt >= 0.05:
-                    if not pass_or_not:
-                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                        print('Can get before pass!')
-                    else:
-                        print('Do CF', speed_ego, speed, spacing)
-                        uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
-                    RefSpd = min(25, RefSpd) #11 for Mcity
-                    cache_time = datetime.datetime.now().timestamp()
-            except:
-                print('------------------------Cannot get advisory speed!!!------------------------')
-
-            #print('At time: ', reference_timestamp)
-            print(spatCache)
-            #print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
-            #print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; To stopbar: ', dist2bar, '--------------------------')
-            
-            #print(controller.eco_drive)
-            #speed2go = 3.6*speed
-
-            ## To compensate early start in recorded testing scenario
-            #if spacing >= 2 and speed_diff >= 1 and RefSpd<=0.1:
-                #RefSpd = speed*3.6/1.6
-
-            ## Get the desired waypoint
             if controller.eco_drive:
-                wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
-                #wp_id = search_target_index(cx, cy, world.player.get_transform(), speed_ego)
-                #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
-            
-            #print('########### wp id: ' + str(wp_id))
-            ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
-            
-            speed2go = RefSpd*1.6
-            # collision consideration
-            if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
-                #controller._control.brake = 0.99
-                speed2go = 0
+                data, addr = sock.recvfrom(4096)
+                hex_data = data.hex()
+                print(hex_data)
+                # Loop: a sub-process for info? another node to make sure data coming in
+
+                reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
+                SPaT_flag, spatInfo = process_SPaT(hex_data)
+
+                #ref_trans = world.player.get_transform()
+                ref_rotation = world.player.get_transform().rotation
+                
+                actor_list = world.world.get_actors()
+                actor_list = actor_list.filter('vehicle.*')
+
+                '''
+                for actor in actor_list:
+                    #print(actor.id, actor.type_id)
+                    if actor.type_id == 'vehicle.bmw.isetta':
+                        print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
+                        ref_trans = actor.get_transform()
+                '''
+                #data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
+                #hex_data = data.hex()
+                BSM_flag, x1, y1, speed = process_BSM(hex_data)
+
+                if BSM_flag is True:
+                    speed_cache = speed
+                elif BSM_flag is False and speed <= 0.1:
+                    speed = speed_cache
+
+                #if BSM_flag is True:
+                    #print('BSM: ', BSM_flag, x1, y1, speed)
+                
+                for actor in actor_list:
+                    #print(actor.id, actor.type_id)
+                    #if actor.type_id == 'vehicle.toyota.prius':
+                    if actor.attributes['role_name'] == 'UCLA-OPENCDA':                        ######Don't forget to add UCLA-OPENCDA/ANL back######
+                        # Use actual name
+                        ref_trans1 = actor.get_transform()
+                        x, y = ref_trans1.location.x, ref_trans1.location.y
+                        ref_rotation = actor.get_transform().rotation
+                        #print(actor.attributes)
+                        #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
+                        break
+
+                if BSM_flag is True:
+                    #print('############ Carla map difference: ', x-x1, y-y1, '############')
+                    pass
+
+                '''
+                if not BSM_flag:
+                    for actor in actor_list:
+                    #print(actor.id, actor.type_id)
+                        if actor.type_id == 'vehicle.bmw.isetta':
+                            ref_trans = actor.get_transform()
+                            x, y = ref_trans.location.x, ref_trans.location.y
+                            #speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
+                            #print('UCLA: ', actor.id, x, y, speed)
+
+                '''
+
+                #x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
+                #speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
+                #accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
+                spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4
+                #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2)
+                speed_diff = speed - speed_ego
+
+                #print(dist2bar)
+                
+                if spacing > 75 or spacing < 0 or np.isnan(speed):
+                    speed = np.nan
+                    spacing = np.nan
+
+                if controller.eco_drive and pass_or_not == 0 and round(last_dist2bar,2) < round(dist2bar,2):
+                    pass_or_not = 1
+
+                if spatInfo != {}:
+                    spatCache = spatInfo
+                    #print(spatInfo)
+                #elif spatInfo == {} and RefSpd >= 0.2:
+                else:
+                    pass
+                    #print('########################## Use previous SPaT! ##########################')
+                    # RefSpd = speed*3.6/1.6
+
+                try:
+                    current_update_time = datetime.datetime.now().timestamp()
+                    dt = current_update_time - cache_time
+
+                    if dt >= 0.05:
+                        if not pass_or_not:
+                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                            print('Do Eco-driving! Can run before pass!')
+                        else:
+                            print('Do CF!!!!!', speed_ego, speed, spacing)
+                            uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 11.2, speed*3.6/1.6, spacing*3.28)
+                        RefSpd = min(25, RefSpd) #11.2 for Mcity
+                        cache_time = datetime.datetime.now().timestamp()
+                except:
+                    print('------------------------Cannot get advisory speed!!!------------------------')
+
+                #print('At time: ', reference_timestamp)
+                print(spatCache)
+                #print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
+                #print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; To stopbar: ', dist2bar, '--------------------------')
+                
+                #print(controller.eco_drive)
+                #speed2go = 3.6*speed
+
+                ## To compensate early start in recorded testing scenario
+                #if spacing >= 2 and speed_diff >= 1 and RefSpd<=0.1:
+                    #RefSpd = speed*3.6/1.6
+
+                ## Get the desired waypoint
+                if controller.eco_drive:
+                    wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
+                    #wp_id = search_target_index(cx, cy, world.player.get_transform(), speed_ego)
+                    #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
+                
+                #print('########### wp id: ' + str(wp_id))
+                ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
+                
+                speed2go = RefSpd*1.6
+                # collision consideration
+                if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
+                    #controller._control.brake = 0.99
+                    speed2go = 0
+                    if wp_id >= len(cx)-1:
+                        #controller.eco_drive = False
+                        pass_or_not = 0
 
             if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
                 return
+
+            if not controller.eco_drive and pass_or_not == 1:
+                pass_or_not = 0
 
             #print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
             #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
@@ -1302,10 +1316,8 @@ def game_loop(args):
 
             if run_step%record_freq == 0:
                 last_dist2bar = dist2bar
-
             ego_speed_buffer.append(speed_ego)
-            Data4JH.append(dataToSave)
-
+            #Data4JH.append(dataToSave)
             #draw_box(world.world, x1, y1, 240)
 
     finally:
@@ -1329,7 +1341,6 @@ def game_loop(args):
 # ==============================================================================
 # -- main() --------------------------------------------------------------------
 # ==============================================================================
-
 
 def main():
     argparser = argparse.ArgumentParser(
