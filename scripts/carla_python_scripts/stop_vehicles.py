@@ -42,80 +42,24 @@ def main():
         type=int,
         help='TCP port to listen to (default: 2000)')
     argparser.add_argument(
-        '-n', '--number-of-vehicles',
-        metavar='N',
-        default=10,
-        type=int,
-        help='number of vehicles (default: 10)')
-    argparser.add_argument(
-        '-w', '--number-of-walkers',
-        metavar='W',
-        default=50,
-        type=int,
-        help='number of walkers (default: 50)')
-    argparser.add_argument(
-        '--safe',
+        '-v','--verbose',
         action='store_true',
-        help='avoid spawning vehicles prone to accidents')
-    argparser.add_argument(
-        '--filterv',
-        metavar='PATTERN',
-        default='vehicle.*',
-        help='vehicles filter (default: "vehicle.*")')
-    argparser.add_argument(
-        '--filterw',
-        metavar='PATTERN',
-        default='walker.pedestrian.*',
-        help='pedestrians filter (default: "walker.pedestrian.*")')
-    argparser.add_argument(
-        '--tm-port',
-        metavar='P',
-        default=8000,
-        type=int,
-        help='port to communicate with TM (default: 8000)')
-    argparser.add_argument(
-        '--sync',
-        action='store_true',
-        help='Synchronous mode execution')
-    argparser.add_argument(
-        '--hybrid',
-        action='store_true',
-        help='Enanble')
-    argparser.add_argument(
-        '-s', '--seed',
-        metavar='S',
-        type=int,
-        help='Random device seed')
+        help='Enable verbose logging')
     argparser.add_argument(
         '-e', '--exclude',
         metavar='VEHICLE_NAME',
         type=str,
-        help='Exclude these vehicles when deleting (comma separated, Ex: VW-MAN-1,ECON-MAN-1)')
-    argparser.add_argument(
-        '--car-lights-on',
-        action='store_true',
-        default=False,
-        help='Enanble car lights')
+        help='Exclude these vehicles when stopping (comma separated, Ex: VW-MAN-1,ECON-MAN-1)')
     args = argparser.parse_args()
 
     logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO)
 
-    vehicles_list = []
-    walkers_list = []
-    all_id = []
     client = carla.Client(args.host, args.port)
     client.set_timeout(10.0)
-    synchronous_master = False
-    random.seed(args.seed if args.seed is not None else int(time.time()))
 
     try:
         world = client.get_world()
-        
-        #world = client.load_world('/Game/Carla/Maps/Carla_v14_10_1_2021')
-        #world = client.get_world()
-        
-        #client = carla.Client()
-        #client.set_timeout(10.0)
+
         already_stopped_once = []
 
         if args.exclude:
@@ -132,15 +76,15 @@ def main():
 
             stopped_vehicles = []
 
-            print(f"Checking for new vehicles to stop [{max_checks - i}]")
+            if args.verbose: print(f"Checking for new vehicles to stop [{max_checks - i}]")
 
             for vehicle in vehicles:
                 
                 if vehicle.attributes["role_name"] in vehicles_to_exclude:
-                    print("\tSkipping: " + str(vehicle.attributes["role_name"]))
+                    if args.verbose: print("\tSkipping: " + str(vehicle.attributes["role_name"]))
                     continue
                 elif vehicle.attributes["role_name"] in already_stopped_once:
-                    print("\tAlready stopped: " + str(vehicle.attributes["role_name"]))
+                    if args.verbose: print("\tAlready stopped: " + str(vehicle.attributes["role_name"]))
                     continue
                 
                 print(f'\tStopping vehicle: {vehicle.attributes["role_name"]}')
@@ -166,15 +110,7 @@ def main():
             time.sleep(1)
 
     finally:
-
-        if args.sync and synchronous_master:
-            settings = world.get_settings()
-            settings.synchronous_mode = False
-            settings.fixed_delta_seconds = None
-            world.apply_settings(settings)
-
         print('\nENDING')
-
 
         time.sleep(0.5)
 

@@ -422,7 +422,7 @@ class KeyboardControl(object):
 
         if not self._autopilot_enabled:
             if isinstance(self._control, carla.VehicleControl):
-                self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time())
+                self._parse_vehicle_keys(pygame.key.get_pressed(), clock.get_time(), world, args)
                 self._control.reverse = self._control.gear < 0
                 # Set automatic control-related vehicle lights
                 if self._control.brake:
@@ -440,9 +440,17 @@ class KeyboardControl(object):
                 self._parse_walker_keys(pygame.key.get_pressed(), clock.get_time(), world)
             world.player.apply_control(self._control)
 
-    def _parse_vehicle_keys(self, keys, milliseconds):
+    def _parse_vehicle_keys(self, keys, milliseconds, world, args):
+                
+        v = world.player.get_velocity()
+        speed = (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
+    
         if keys[K_UP] or keys[K_w]:
-            self._control.throttle = min(self._control.throttle + 0.01, 1)
+            if speed > args.speed_limit:
+                self._control.throttle = 0.0
+            else:
+                self._control.throttle = min(self._control.throttle + 0.01, 1)
+
         else:
             self._control.throttle = 0.0
 
@@ -1114,6 +1122,12 @@ def main():
         '--follow_vehicle',
         default="TFHRC-MANUAL-1",
         help='Vehicle to be used for the follow cam (default: "TFHRC-MANUAL-1"')
+    argparser.add_argument(
+        '-s', '--speed_limit',
+        metavar='S',
+        default=50,
+        type=int,
+        help='Speed limit for manual vehicle in kph (default: 50 kph)')
     args = argparser.parse_args()
 
     args.width, args.height = [int(x) for x in args.res.split('x')]
