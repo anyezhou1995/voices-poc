@@ -213,9 +213,9 @@ try:
             if this_veh_actor == None:
                 
                 for eco_data_field in this_eco_data:
-                    this_eco_data[eco_data_field] = ""
+                    this_eco_data[eco_data_field] = [""]
                 
-                this_eco_data['index'].append(index)
+                this_eco_data['index'] = [index]
                 this_eco_data['current_time'] = [time.time()]
 
             else:
