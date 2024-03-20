@@ -1018,7 +1018,7 @@ def IntelligentDriverModel(vehicle_current_speed, orginal_desire_spd, acc_speed_
 
     instant_desired_speed = np.maximum(0, vehicle_current_speed + a_instant)
 
-    print(instant_desired_speed)
+    #print(instant_desired_speed)
 
     return a_instant, instant_desired_speed * 2.23694
 
@@ -1297,8 +1297,8 @@ def gen_desired_spd(example_coasting_profile, A, B, C, M, orginal_desire_spd, ne
     if np.isnan(instant_desired_speed):
         print('Desired Speed is NaN')
     # print('\ninstant_desired_speed: ', instant_desired_speed)
-    print('\ncurrent time: {}, \ncurrent speed: {}, \nqueue_length: {}, \ninstant_desired_speed: {}, \nmode: {}, \na_out: {}, \ndesired_speed: {}, \nminimum_desired_speed: {}\n'.format(
-        simsec, vehicle_current_speed, queue_coast, instant_desired_speed, mode, a_out, desired_speed, minimum_desired_speed))
+    #print('\ncurrent time: {}, \ncurrent speed: {}, \nqueue_length: {}, \ninstant_desired_speed: {}, \nmode: {}, \na_out: {}, \ndesired_speed: {}, \nminimum_desired_speed: {}\n'.format(
+        #simsec, vehicle_current_speed, queue_coast, instant_desired_speed, mode, a_out, desired_speed, minimum_desired_speed))
 
     # return queue_coast, float(instant_desired_speed), mode, float(a_out), desired_speed, minimum_desired_speed
     return queue_coast, float(instant_desired_speed), mode, float(a_out)

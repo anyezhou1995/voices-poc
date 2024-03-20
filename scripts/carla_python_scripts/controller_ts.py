@@ -30,7 +30,7 @@ class VehiclePIDController():
     """
 
 
-    def __init__(self, vehicle, args_lateral, args_longitudinal, max_throttle=0.99, max_brake=0.349, max_steering=0.7):
+    def __init__(self, vehicle, args_lateral, args_longitudinal, max_throttle=0.99, max_brake=0.319, max_steering=0.81):
         """
         Constructor method.
 

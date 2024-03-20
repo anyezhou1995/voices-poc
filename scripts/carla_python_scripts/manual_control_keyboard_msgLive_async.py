@@ -228,8 +228,8 @@ class World(object):
                 spawn_points = self.map.get_spawn_points()
                 spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
                 #spawn_point = carla.Transform(carla.Location(x=52.122, y=2.986, z=237.5), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
-                #spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344+2), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
-                spawn_point = carla.Transform(carla.Location(x=129.91, y=-224.152, z=244.222+2), carla.Rotation(pitch=0.932, yaw=141.25, roll=-0.031))
+                spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344+2), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                #spawn_point = carla.Transform(carla.Location(x=129.91, y=-224.152, z=244.222+2), carla.Rotation(pitch=0.932, yaw=141.25, roll=-0.031))
 
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
@@ -244,7 +244,7 @@ class World(object):
         self.hud.notification(actor_type)
 
         # settign up PID controller
-        args_lateral = {'K_P': 1.95/1, 'K_D': 0.2/2, 'K_I': 0.1, 'dt': 0.1}
+        args_lateral = {'K_P': 1.95/2, 'K_D': 0.2/2, 'K_I': 0.075, 'dt': 0.08}
         args_longitudinal = {'K_P': 1.0*3.5, 'K_D': 0.02, 'K_I': 0.05, 'dt': 0.08}
         self.PID = VehiclePIDController(self.player, args_lateral, args_longitudinal)
 
@@ -1072,6 +1072,7 @@ import readline
 import pandas as pd
 from configparser import ConfigParser
 import json
+import asyncio
 #import matplotlib.pyplot as plt
 
 from agents.navigation.global_route_planner import GlobalRoutePlanner
@@ -1096,7 +1097,54 @@ barPos_x, barPos_y = 106.9436, 11.1924
 update_gap = 1
 
 
-def game_loop(args):
+# async function for data J2735 data communication
+async def data_communication(sock, speed_cache, spatCache):
+    data, addr = sock.recvfrom(4096)
+    hex_data = data.hex()
+    print(hex_data)
+    # Loop: a sub-process for info? another node to make sure data coming in
+
+    SPaT_flag, spatInfo = process_SPaT(hex_data)
+
+    if spatInfo != {}:
+        spatCache = spatInfo
+        # print(spatInfo)
+    # elif spatInfo == {} and RefSpd >= 0.2:
+    else:
+        pass
+
+    print(spatCache)
+
+    BSM_flag, x1, y1, speed = process_BSM(hex_data)
+
+    if BSM_flag is True:
+        speed_cache = speed
+    elif BSM_flag is False and speed <= 0.1:
+        speed = speed_cache
+
+    if BSM_flag is True:
+        # print('############ Carla map difference: ', x-x1, y-y1, '############')
+        pass
+
+    return spatCache, x1, y1, speed, speed_cache
+
+
+async def speed_control(pass_or_not, speed_ego, accel_ego, dist2bar, speed, spacing, reference_timestamp, spatCache):
+    if not pass_or_not:
+        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego * 3.6 / 1.6, accel_ego, dist2bar * 3.28,
+                                                         speed * 3.6 / 1.6, spacing * 3.28, reference_timestamp,
+                                                         spatCache)
+        print('Do Eco-driving! Can run before pass!')
+    else:
+        print('Do CF!!!!!', speed_ego, speed, spacing)
+        uselessOutput, RefSpd = IntelligentDriverModel(speed_ego * 3.6 / 1.6, 11.2, speed * 3.6 / 1.6, spacing * 3.28)
+
+    RefSpd = min(25, RefSpd)  # 11.2 for Mcity
+
+    return RefSpd
+
+
+async def game_loop(args):
     pygame.init()
     pygame.font.init()
     world = None
@@ -1160,7 +1208,7 @@ def game_loop(args):
         run_step = 0
 
         while True:
-            clock.tick_busy_loop(30)
+            clock.tick_busy_loop(60)
 
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
@@ -1168,14 +1216,9 @@ def game_loop(args):
             dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2)
             
             if controller.eco_drive:
-                # Maybe need an extra loop for information selection
-                data, addr = sock.recvfrom(4096)
-                hex_data = data.hex()
-                #print(hex_data)
-                # Loop: a sub-process for info? another node to make sure data coming in
-
                 reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
-                SPaT_flag, spatInfo = process_SPaT(hex_data)
+
+                spatCache, x1, y1, speed, speed_cache = await data_communication(sock, speed_cache, spatCache)
 
                 #ref_trans = world.player.get_transform()
                 ref_rotation = world.player.get_transform().rotation
@@ -1190,14 +1233,8 @@ def game_loop(args):
                         print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
                         ref_trans = actor.get_transform()
                 '''
-                data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
-                hex_data = data.hex()
-                BSM_flag, x1, y1, speed = process_BSM(hex_data)
-
-                if BSM_flag is True:
-                    speed_cache = speed
-                elif BSM_flag is False and speed <= 0.1:
-                    speed = speed_cache
+                #data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
+                #hex_data = data.hex()
 
                 #if BSM_flag is True:
                     #print('BSM: ', BSM_flag, x1, y1, speed)
@@ -1205,7 +1242,7 @@ def game_loop(args):
                 for actor in actor_list:
                     #print(actor.id, actor.type_id)
                     #if actor.type_id == 'vehicle.toyota.prius':
-                    if actor.attributes['role_name'] == 'ANL-DYNO-1':              ###### UCLA-OPENCDA/ANL-DYNO-1 ######
+                    if actor.attributes['role_name'] == 'UCLA-OPENCDA':                        ######Don't forget to add UCLA-OPENCDA/ANL back######
                         # Use actual name
                         ref_trans1 = actor.get_transform()
                         x, y = ref_trans1.location.x, ref_trans1.location.y
@@ -1213,10 +1250,6 @@ def game_loop(args):
                         #print(actor.attributes)
                         #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                         break
-
-                if BSM_flag is True:
-                    #print('############ Carla map difference: ', x-x1, y-y1, '############')
-                    pass
 
                 '''
                 if not BSM_flag:
@@ -1229,7 +1262,6 @@ def game_loop(args):
                             #print('UCLA: ', actor.id, x, y, speed)
 
                 '''
-
                 #x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
                 #speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
                 #accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
@@ -1246,12 +1278,7 @@ def game_loop(args):
                 if controller.eco_drive and pass_or_not == 0 and round(last_dist2bar,2) < round(dist2bar,2):
                     pass_or_not = 1
 
-                if spatInfo != {}:
-                    spatCache = spatInfo
-                    print(spatInfo)
-                #elif spatInfo == {} and RefSpd >= 0.2:
-                else:
-                    pass
+
                     #print('########################## Use previous SPaT! ##########################')
                     # RefSpd = speed*3.6/1.6
 
@@ -1260,19 +1287,12 @@ def game_loop(args):
                     dt = current_update_time - cache_time
 
                     if dt >= 0.05:
-                        if not pass_or_not:
-                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                            #print('Do Eco-driving! Can run before pass!')
-                        else:
-                            #print('Do CF!!!!!', speed_ego, speed, spacing)
-                            uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 11.2, speed*3.6/1.6, spacing*3.28)
-                        RefSpd = min(11.2, RefSpd) #11.2 for Mcity
+                        RefSpd = await speed_control(pass_or_not, speed_ego, accel_ego, dist2bar, speed, spacing, reference_timestamp, spatCache)
                         cache_time = datetime.datetime.now().timestamp()
                 except:
                     print('------------------------Cannot get advisory speed!!!------------------------')
 
                 #print('At time: ', reference_timestamp)
-                #print(spatCache)
                 #print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
                 #print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; To stopbar: ', dist2bar, '--------------------------')
                 
@@ -1408,7 +1428,7 @@ def main():
 
     try:
 
-        game_loop(args)
+        asyncio.run(game_loop(args))
 
     except KeyboardInterrupt:
         print('\nCancelled by user. Bye!')

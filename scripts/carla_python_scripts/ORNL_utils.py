@@ -150,8 +150,8 @@ def process_BSM(hex_data):
 
         bsmId = decoded_bsm['value'][1]['coreData']['id']
         decoded_bsm['value'][1]['coreData']['id'] = str(bsmId.hex())
-        if decoded_bsm['value'][1]['coreData']['id'] == "f03ad620":
-        #if decoded_bsm['value'][1]['coreData']['id'] == "f03ad627":
+        #if decoded_bsm['value'][1]['coreData']['id'] == "f03ad626":       #UCLA-OPENCDA
+        if decoded_bsm['value'][1]['coreData']['id'] == "f03ad623":        #ANL-DYNO-1
             #print("Received BSM")
             lat= decoded_bsm['value'][1]['coreData']['lat']
             longstr = decoded_bsm['value'][1]['coreData']['long']
@@ -460,8 +460,8 @@ def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, refere
             return 0, data_toSave, 1
 
         #print('Before mod:', current_time_rel - 5180)
-        print('current time: {}, \ncurrent speed: {}, \nqueue_length: {}, \ninstant_desired_speed: {}, \nmode: {}, \nfollow_distance: {}\n'.
-              format(int(current_time_rel), int(cav_spd), int(queue_length), int(instant_desired_speed), mode, gapDist))
+        #print('current time: {}, \ncurrent speed: {}, \nqueue_length: {}, \ninstant_desired_speed: {}, \nmode: {}, \nfollow_distance: {}\n'.
+              #format(int(current_time_rel), int(cav_spd), int(queue_length), int(instant_desired_speed), mode, gapDist))
 
         print('\n----------------------------------------------------------------------------------------------------')
 
