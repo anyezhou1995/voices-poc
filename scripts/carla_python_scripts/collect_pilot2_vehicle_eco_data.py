@@ -39,7 +39,7 @@ args = argparser.parse_args()
 
 
 def check_for_vehicles(vehicle_rolename_actor_map,vehicle_list):
-    print("\nChecking for vehicles")
+    # print("\nChecking for vehicles")
 
     vehicle_actor_list = world.get_actors().filter('vehicle.*')
 
@@ -47,7 +47,7 @@ def check_for_vehicles(vehicle_rolename_actor_map,vehicle_list):
         # print(f"Checking {vehicle_actor}")
 
         if vehicle_actor.attributes["role_name"] in vehicle_list:
-            print(f'Found vehicle: {vehicle_actor.attributes["role_name"]}')
+            # print(f'Found vehicle: {vehicle_actor.attributes["role_name"]}')
             vehicle_rolename_actor_map[vehicle_actor.attributes["role_name"]]["vehicle_actor"] = vehicle_actor
 
     return vehicle_rolename_actor_map
@@ -100,6 +100,26 @@ def get_road_grade(start_point,end_point,mid_point):
     # print(f'grade: {grade}')
     return grade
 
+def get_next_prev_waypoint_grade(waypoint):
+    next_waypoint_list = waypoint.next(0.5)
+    # print(f'Next Waypoints: {len(next_waypoint_list)}')
+    
+    prev_waypoint_list = waypoint.previous(0.5)
+    # print(f'Prev Waypoints: {len(prev_waypoint_list)}')
+
+    if len(next_waypoint_list) > 0 and len(prev_waypoint_list) > 0:
+        next_prev_waypoint_grade = get_road_grade(prev_waypoint_list[0].transform.location, next_waypoint_list[0].transform.location, waypoint.transform.location)
+    else:
+        next_prev_waypoint_grade = "NA"
+
+    this_eco_data['next_prev_waypoint_grade'].append(next_prev_waypoint_grade)
+
+    if args.display:
+        draw_box_at_point(waypoint)
+        draw_box_at_point(next_waypoint_list[0])
+        draw_box_at_point(prev_waypoint_list[0])
+
+
 try:
     client = carla.Client(args.host, args.port)
     client.set_timeout(5.0)
@@ -110,7 +130,7 @@ try:
     # Print all index corresponding to all traffic vehicles in scene (CarlaUE4)
 
     current_directory = os.getcwd()
-    eco_data_folder = "pilot2_eco_data"
+    eco_data_folder = os.getenv("VUG_LOG_FILES_ROOT") + "/pilot2_eco_data"
     eco_data_folder_path = os.path.join(current_directory, eco_data_folder)
     if not os.path.exists(eco_data_folder_path):
         os.makedirs(eco_data_folder_path)
@@ -133,7 +153,7 @@ try:
                 "speed" : [],
                 "vehicle_pitch" : [],
                 "waypoint_pitch" : [],
-                "next_prev_waypoint_grade" : [],
+                # "next_prev_waypoint_grade" : [],
             }
 
     for vehicle_rolename in vehicle_list:
@@ -156,7 +176,7 @@ try:
 
         if not found_all_veh:
             vehicle_rolename_actor_map = check_for_vehicles(vehicle_rolename_actor_map,vehicle_list)
-            print(f'vehicle_rolename_actor_map: {vehicle_rolename_actor_map}')
+            # print(f'vehicle_rolename_actor_map: {vehicle_rolename_actor_map}')
 
             # check if we found all vehicles, if we did, we can stop checking (and save get_world hits to API)
             for vehicle_rolename in vehicle_rolename_actor_map:
@@ -167,7 +187,7 @@ try:
                     found_all_veh = True
 
             if found_all_veh:
-                print("\nFOUND ALL VEHICLES")
+                print("\nFOUND ALL COLLECTION VEHICLES")
 
 
 
@@ -183,10 +203,10 @@ try:
                 "speed" : [],
                 "vehicle_pitch" : [],
                 "waypoint_pitch" : [],
-                "next_prev_waypoint_grade" : [],
+                # "next_prev_waypoint_grade" : [],
             }
 
-            print(f'\nGetting data for {vehicle_rolename}')
+            # print(f'\nGetting data for {vehicle_rolename}')
 
             this_veh_actor = vehicle_rolename_actor_map[vehicle_rolename]["vehicle_actor"]
             
@@ -195,6 +215,7 @@ try:
                 for eco_data_field in this_eco_data:
                     this_eco_data[eco_data_field] = ""
                 
+                this_eco_data['index'].append(index)
                 this_eco_data['current_time'] = [time.time()]
 
             else:
@@ -234,23 +255,7 @@ try:
                 # print(f'waypoint_pitch: {waypoint_pitch}')
                 this_eco_data['waypoint_pitch'].append(waypoint_pitch)
 
-                next_waypoint_list = closest_waypoint.next(0.5)
-                print(f'Next Waypoints: {len(next_waypoint_list)}')
-                
-                prev_waypoint_list = closest_waypoint.previous(0.5)
-                print(f'Prev Waypoints: {len(prev_waypoint_list)}')
-
-                if len(next_waypoint_list) > 0 and len(prev_waypoint_list) > 0:
-                    next_prev_waypoint_grade = get_road_grade(prev_waypoint_list[0].transform.location, next_waypoint_list[0].transform.location, closest_waypoint.transform.location)
-                else:
-                    next_prev_waypoint_grade = "NA"
-
-                this_eco_data['next_prev_waypoint_grade'].append(next_prev_waypoint_grade)
-
-                if args.display:
-                    draw_box_at_point(closest_waypoint)
-                    draw_box_at_point(next_waypoint_list[0])
-                    draw_box_at_point(prev_waypoint_list[0])
+                # get_next_prev_waypoint_grade(closest_waypoint)
 
                 v = this_veh_actor.get_velocity()
                 speed = (3.6 * math.sqrt
@@ -263,8 +268,8 @@ try:
 
             df.to_csv(eco_data_folder_path + "/" + vehicle_rolename_actor_map[vehicle_rolename]["filename"],mode='a',header=False,index=False)
 
-            index += 1
-            time.sleep(0.1)
+        index += 1
+        time.sleep(0.1)
 
 finally:
-    print('Done, Actors cleaned-up successfully!')
+    print('Done, stopping collection')
