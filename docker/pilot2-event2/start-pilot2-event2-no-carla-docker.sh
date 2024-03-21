@@ -134,7 +134,7 @@ if [[ ! -z $vpn_check ]]; then
     if [[ ! -z $em_fqdn_address ]]; then
 
         echo
-        read -p "Would you like to use the vpn IP as VUG_EM_ADDRESS? ($em_fqdn_address) [y/n] " use_em_vpn_ip
+        read -p "Would you like to use the VPN IP as VUG_EM_ADDRESS? ($em_fqdn_address) [y/n] " use_em_vpn_ip
     
         if [[ $use_em_vpn_ip =~ ^[yY]$ ]]; then
 

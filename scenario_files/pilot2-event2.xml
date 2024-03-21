@@ -13,7 +13,7 @@
 
   <vehicles>
 
-    <vehicle name="carma_1" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="carma_1" bsmid="f03ad619" type="vehicle.toyota.prius" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="carma_1"/>
             <!-- <CARLA manual="true" generate_bsms="false"></CARLA> -->
@@ -25,7 +25,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="UCLA-OPENCDA" bsmid="f03ad626" type="vehicle.mustang.mustang" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="UCLA-OPENCDA" bsmid="f03ad626" type="vehicle.toyota.prius" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <!-- <CARMA CARLAcosimulationIdentifier="CARLA-UCLA-1" roleName="UCLA-OPENCDA" generate_bsms="true"/> -->
             <CARLA manual="true" generate_bsms="true"></CARLA>
@@ -37,7 +37,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="ANL-DYNO-1" bsmid="f03ad623" type="vehicle.nissan.micra" owner="CARLA-ANL-2" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ANL-DYNO-1" bsmid="f03ad623" type="vehicle.toyota.prius" owner="CARLA-ANL-2" material="Aluminum" lvcIndicator="Live">
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.3025391192385" longitudeInDegrees="-83.69779345760013" heightAboveEllipsoidInMeters="250"/>
             <!-- x=122.6563949584961 y=-216.5980682373047 yaw=124.6 -->
@@ -56,7 +56,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="MCITY-TERASIM-01" bsmid="f03ad622" type="vehicle.audi.a2" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-TERASIM-01" bsmid="f03ad622" type="vehicle.toyota.prius" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-TERASIM-01" generate_bsms="true"/>
         </userData>
@@ -67,7 +67,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="MCITY-TERASIM-02" bsmid="f03ad620" type="vehicle.bmw.isetta" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-TERASIM-02" bsmid="f03ad620" type="vehicle.toyota.prius" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-TERASIM-02" generate_bsms="true"/>
         </userData>
@@ -78,7 +78,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="MCITY-CAV-01" bsmid="f03ad620" type="vehicle.bmw.isetta" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-CAV-01" bsmid="f03ad620" type="vehicle.lincoln.mkz2017" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-CAV-01" generate_bsms="true"/>
         </userData>

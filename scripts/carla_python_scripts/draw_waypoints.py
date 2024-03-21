@@ -97,6 +97,37 @@ def get_veh_with_name(veh_rolename):
     
     return player
 
+def get_road_grade(start_point,end_point,mid_point):
+
+    print(f'mid_point: {mid_point[0].transform}')
+    
+    run = math.sqrt((end_point[0].transform.location.x - start_point[0].transform.location.x)**2 + (end_point[0].transform.location.y - start_point[0].transform.location.y)**2 )
+    print(f'\nrun: {run}')
+    rise = end_point[0].transform.location.z - start_point[0].transform.location.z
+    print(f'rise: {rise}')
+
+    if run == 0:
+        grade = 0
+    else:
+        grade = rise/run*100
+
+    draw_arrow_size = 0.2
+    draw_arrow_thickness = 0.2
+    draw_arrow_z_offset = carla.Location(0,0,0)
+
+    # world.debug.draw_arrow(
+    #     mid_point[0].transform.location + draw_arrow_z_offset, 
+    #     mid_point[0].transform.location + mid_point[0].transform.get_forward_vector() + draw_arrow_z_offset,
+    #     thickness=draw_arrow_thickness, 
+    #     arrow_size=draw_arrow_size, 
+    #     color=carla.Color(r=0, g=50, b=255), 
+    #     life_time=drawing_lifetime)
+    
+    world.debug.draw_string(mid_point[0].transform.location,str(grade), draw_shadow=False,color = carla.Color(r=0, g=255, b=0), life_time=drawing_lifetime,persistent_lines=True)
+
+
+    print(f'grade: {grade}')
+
 def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):   
 
     print("SETTING UP MAP")
@@ -181,6 +212,7 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         "latitude" : [],
         "longitude" : [],
         "altitude" : [],
+        "road_grade" : [],
         # "is_segment_endpoint" : [],
     }
     
@@ -270,14 +302,20 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         waypoint_data["z"].append(waypoint[0].transform.location.z)
 
         carla_heading = waypoint[0].transform.rotation.yaw
-        while int(carla_heading) < 0:
+        while carla_heading < 0:
             carla_heading = carla_heading + 360
+
+        while carla_heading > 360:
+            carla_heading = carla_heading - 360
             
         waypoint_data["carla_heading"].append(carla_heading)
         
-        geo_heading = carla_heading - 90
+        geo_heading = carla_heading + 90
         while geo_heading < 0:
             geo_heading = geo_heading + 360
+
+        while geo_heading > 360:
+            geo_heading = geo_heading - 360
 
         waypoint_data["geo_heading"].append(geo_heading)
 
@@ -286,6 +324,13 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         waypoint_data["latitude"].append(w_geo.latitude)
         waypoint_data["longitude"].append(w_geo.longitude)
         waypoint_data["altitude"].append(w_geo.altitude)
+
+        waypoint_data["road_grade"].append(waypoint[0].transform.rotation.pitch)
+
+        # if i > 0 and i < len(route_waypoints) - 1:
+        #     get_road_grade(route_waypoints[i-1],route_waypoints[i+1],route_waypoints[i])
+
+
 
 
     return waypoint_data
@@ -374,8 +419,6 @@ try:
             time.sleep(draw_loop_sleep)
     else:
         
-              
-
         waypoint_data = draw_waypoints(world,map,event2_spawn["waypoints"],False,"")
         num_waypoints = len(waypoint_data["x"])
         print("num_waypoints: " + str(num_waypoints))
