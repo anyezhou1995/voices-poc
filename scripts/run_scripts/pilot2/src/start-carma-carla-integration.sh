@@ -109,7 +109,7 @@ done
 # SPAWN_PT="109.881569, -65.993828, 240, 0, 0, 270"
 
 # yield test
-SPAWN_PT="110.145599, -69.313705, 240, 0, 0, 270"
+# SPAWN_POINT="110.145599, -69.313705, 240, 0, 0, 270"
 
 echo "----- STARTING CARLA-CARMA INTEGRATION TOOL -----"
 
@@ -129,10 +129,11 @@ docker exec \
         export PYTHONUNBUFFERED=1 && \
         source ~/carma_carla_ws/devel/setup.bash && \
         roslaunch carma_carla_agent carma_carla_agent.launch \
-            spawn_point:=\"$SPAWN_PT\" \
+            spawn_point:=\"$VUG_CARMA_SPAWN_POINT\" \
             town:=\"$carla_map\" \
-            selected_route:='p2e2_yield_test' \
-            synchronous_mode:='true' \
+            selected_route:=\"$VUG_CARMA_ROUTE\" \
+            synchronous_mode:='false' \
+            fixed_delta_seconds:=0.0 \
             use_sim_time:='true' \
             speed_Kp:=0.4 \
             speed_Ki:=0.03 \
