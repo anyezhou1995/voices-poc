@@ -138,13 +138,6 @@ if [[ $VUG_DOCKER_START_MANUAL_CARLA_VEHICLE == true ]]; then
    sleep 5s
 fi
 
-if [[ $VUG_COLLECT_ECO_DATA == true ]]; then
-   echo "STARTING ECO DATA COLLECTOR"
-   python3 $HOME/voices-poc/scripts/carla_python_scripts/collect_pilot2_vehicle_eco_data.py --vehicle_rolenames $VUG_COLLECT_ECO_DATA_ROLENAMES &
-
-   sleep 5s
-fi
-
 echo
 echo "VUG STARTUP COMLPETE"
 
