@@ -36,25 +36,62 @@ fi
 
 
 echo
-read -p "Are you hosting a CARMA Platform Vehicle? [y/n]" isCarmaVehicle
+read -p "Are you hosting a CARMA Platform Vehicle? [y/n] " isCarmaVehicle
 
-
-j2735_tcpdump_out="sudo tcpdump -i lo port $VUG_J2735_ADAPTER_RECEIVE_PORT -w J2735_packet_in.pcap"
-j2735_tcpdump_in="sudo tcpdump -i lo port $VUG_J2735_ADAPTER_SEND_PORT -w J2735_packet_out.pcap"
-
-j3224_tcpdump_out="sudo tcpdump -i lo port $VUG_J3224_ADAPTER_RECEIVE_PORT -w J3224_packet_in.pcap"
-j3224_tcpdump_in="sudo tcpdump -i lo port $VUG_J3224_ADAPTER_SEND_PORT -w J3224_packet_out.pcap"
-
+username=$(whoami)
 
 timestamp=$(date -d "today" +"%Y%m%d%H%M%S")
 
 logs_folder_name=$VUG_SIM_ID'_'$timestamp
+
+if [[ $VUG_DOCKER_START_TJ2735_ADAPTER == true ]]; then
+
+    j2735_tcpdump_out="tcpdump -i lo port $VUG_J2735_ADAPTER_RECEIVE_PORT -w J2735_packet_in.pcap"
+    j2735_tcpdump_in="tcpdump -i lo port $VUG_J2735_ADAPTER_SEND_PORT -w J2735_packet_out.pcap"
+
+    if [[ $username != "root" ]]; then
+        j2735_tcpdump_out="sudo "+$j2735_tcpdump_out
+        j2735_tcpdump_in="sudo "+$j2735_tcpdump_in
+    fi
+
+fi
+
+if [[ $VUG_DOCKER_START_TJ3224_ADAPTER == true ]]; then
+
+    j3224_tcpdump_out="tcpdump -i lo port $VUG_J3224_ADAPTER_RECEIVE_PORT -w J3224_packet_in.pcap"
+    j3224_tcpdump_in="tcpdump -i lo port $VUG_J3224_ADAPTER_SEND_PORT -w J3224_packet_out.pcap"
+
+    if [[ $username != "root" ]]; then
+        j3224_tcpdump_out="sudo "+$j3224_tcpdump_out
+        j3224_tcpdump_in="sudo "+$j3224_tcpdump_in
+    fi
+
+fi
 
 echo
 echo "Folder Name: "$logs_folder_name
 
 mkdir -p $VUG_LOG_FILES_ROOT/$logs_folder_name
 cd $VUG_LOG_FILES_ROOT/$logs_folder_name
+
+echo
+read -p "Would you like to collect the TENA SDO data? [y/n] " save_tdcs_data
+
+if [[ $save_tdcs_data =~ ^[yY]$ ]]; then
+    echo
+    echo "Starting TDCS" 
+    tdcs_command="$VUG_TDCS_PATH/start.sh -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -databaseName $logs_folder_name.sqlite -dbFolder ."
+    echo $tdcs_command
+    $tdcs_command &
+fi
+
+echo
+read -p "Would you like to collect eco data [y/n] " collect_eco
+
+if [[ $collect_eco =~ ^[yY]$ ]]; then
+    echo collecting
+    collect_eco_cmd="python3 $HOME/voices-poc/scripts/carla_python_scripts/collect_pilot2_vehicle_eco_data.py --vehicle_rolenames $VUG_COLLECT_ECO_DATA_ROLENAMES --host $VUG_CARLA_ADDRESS --output_dir $VUG_LOG_FILES_ROOT/$logs_folder_name"
+fi
 
 #if we are not a live vehicle then prompt to collect logs 
 #(live vehicle is not connected to VOICES network)
@@ -107,7 +144,12 @@ echo $j2735_tcpdump_out
 echo $j2735_tcpdump_in
 echo $j3224_tcpdump_out
 echo $j3224_tcpdump_in
+echo $collect_eco_cmd
+
+echo
+read -p "Data collection ready, press [ENTER] to begin..." dummyvar
+
 echo
 echo "Starting tcpdumps - when finished press [CTRL + C]"
 echo 
-$j2735_tcpdump_out &  $j2735_tcpdump_in & $j3224_tcpdump_out & $j3224_tcpdump_in & wait
+$collect_eco_cmd & $j2735_tcpdump_out & $j2735_tcpdump_in & $j3224_tcpdump_out & $j3224_tcpdump_in & wait

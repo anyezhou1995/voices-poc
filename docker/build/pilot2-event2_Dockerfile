@@ -51,7 +51,7 @@ RUN apt-get update && \
     # install pip
     python3-pip \
     # install debug tools
-    iputils-ping nano tshark git \
+    iputils-ping nano tshark git tcpdump \
     # install sumo tools
     sumo=1.19.0-1~focal sumo-tools=1.19.0-1~focal sumo-doc=1.19.0-1~focal \
     # cleanup apt lists

@@ -1,0 +1,128 @@
+<?xml version="1.0.0" encoding="UTF-8"?>
+<scenario>
+  <identifier>
+    <name>Pilot 2 Event 2</name>
+  </identifier>
+  <OpenDrive>
+    <MapFileName name="mcity_map_v2.xodr">
+      <MapOrigin latitudeInDegrees="42.30059341574939" longitudeInDegrees="-83.69928318881136" heightAboveEllipsoidInMeters="0"> </MapOrigin>
+    </MapFileName>
+  </OpenDrive>
+
+
+
+  <vehicles>
+
+    <vehicle name="carma_1" bsmid="f03ad620" type="vehicle.toyota.prius" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="carma_1"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>
+            <Heading>256.89</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <!-- <vehicle name="UCLA-OPENCDA" bsmid="f03ad626" type="vehicle.toyota.prius" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARLA manual="true" generate_bsms="true"></CARLA>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.30245402283134" longitudeInDegrees="-83.69784540965374" heightAboveEllipsoidInMeters="250"/>
+            <Heading>193.40</Heading>
+        </initialTSPI>
+    </vehicle> -->
+
+    <vehicle name="FHWA-MAN-1" bsmid="f03ad619" type="vehicle.toyota.prius" owner="CARLA-FHWA-1" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARLA manual="true" generate_bsms="false"></CARLA>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.300399" longitudeInDegrees="-83.698250" heightAboveEllipsoidInMeters="245"/>
+            <!-- x=86.123024 y=21.699108 yaw=272 -->
+            <Heading>238</Heading>
+        </initialTSPI>
+    </vehicle>
+
+  </vehicles>
+
+  <intersectionSignalControllers>
+    <intersectionSignalController name="tsc_mcity_state_and_liberty" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="ctrl549" id="549"/>
+          </controllers>
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+  </intersectionSignalControllers>
+  <phaseSignalMappings>
+        <configuration name="MCity Wolverine and Liberty Configuration - Replay" intersectionName="tsc_mcity_state_and_liberty">
+      <controller name="ctrl549-502A" id="549">
+        <control signalId="658" type="">
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="ctrl549-497A" id="549">
+        <control signalId="663" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="ctrl549-504A" id="549">
+        <control signalId="656" type="">
+          <userData><phase>6</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+  </phaseSignalMappings>
+
+  <simulations>
+
+    <simulation name="CARLA-FHWA-3" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+    
+    <simulation name="CARLA-UCLA-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ECO-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-VW-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-VW-2" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ANL-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ANL-2" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-MCITY-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-TTS-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-MITRE-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ORNL-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+  </simulations>
+
+</scenario>

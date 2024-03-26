@@ -34,7 +34,11 @@ argparser.add_argument(
 argparser.add_argument(
     '--vehicle_rolenames', '-v',
     required=True,
-    help='Comma separated list of vehicles to collect data for ( ex: VEH-1,VEH-2,VEH-3 )')
+    help='Comma separated list of vehicles to collect data for (ex: VEH-1,VEH-2,VEH-3)')
+argparser.add_argument(
+    '--output_dir', '-o',
+    type=str,
+    help='Location directory for output eco data file (default: $VUG_LOG_FILES_ROOT/pilot2_eco_data)')
 args = argparser.parse_args()
 
 
@@ -130,8 +134,12 @@ try:
     # Print all index corresponding to all traffic vehicles in scene (CarlaUE4)
 
     current_directory = os.getcwd()
-    eco_data_folder = os.getenv("VUG_LOG_FILES_ROOT") + "/pilot2_eco_data"
-    eco_data_folder_path = os.path.join(current_directory, eco_data_folder)
+    if args.output_dir:
+        eco_data_folder_path = args.output_dir
+    else:
+        eco_data_folder = os.getenv("VUG_LOG_FILES_ROOT") + "/pilot2_eco_data"
+        eco_data_folder_path = os.path.join(current_directory, eco_data_folder)
+    
     if not os.path.exists(eco_data_folder_path):
         os.makedirs(eco_data_folder_path)
 
