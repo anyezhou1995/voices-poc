@@ -99,6 +99,16 @@ do
 	fi
 done
 
+# Ensure tshark is installed
+REQUIRED_PKG="tshark"
+PKG_OK=$(dpkg-query -W --showformat='${Status}\n' $REQUIRED_PKG|grep "install ok installed")
+echo Checking for $REQUIRED_PKG: $PKG_OK
+if [ "" = "$PKG_OK" ]; then
+  echo "No $REQUIRED_PKG found. Installing $REQUIRED_PKG."
+  sudo apt-get update
+  sudo apt-get --yes install $REQUIRED_PKG
+fi
+
 if [ -d data ]; then
 	printf "\nFiles found in data directory:"
 else
@@ -178,7 +188,7 @@ getPayload(){
 
 decodePackets(){
 
-	if [ $decoded_files_dest_dir_arg == "" ]; then
+	if [[ $decoded_files_dest_dir_arg == "" ]]; then
 
 		output_dest=$directory/data/decodedOutput/$input_pcap_base_name"_decoded_packets"
 	else
@@ -187,9 +197,15 @@ decodePackets(){
 
 	cd $directory/data/payloadOutput
 
-	if [ -d $output_dest ] && [[ $keep_old_files_arg != true ]]; then
-		printf "\nResult files from previous decoding found, removing them"
-		rm -rf $output_dest
+	if [ -d $output_dest ]; then
+		if [[ $keep_old_files_arg != true ]]; then
+			printf "\nResult files from previous decoding found, removing them"
+			rm -rf $output_dest
+			mkdir $output_dest
+		fi
+
+	else
+		mkdir $output_dest
 	fi
 
 	decoded_file=$input_pcap_base_name"_decoded_packets.csv"
