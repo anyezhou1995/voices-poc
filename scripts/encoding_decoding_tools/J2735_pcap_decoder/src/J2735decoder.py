@@ -115,7 +115,7 @@ message_types = {
     "BSM" : {
         "name" : "BSM",
         "message_spec" : "J2735",
-        "message_id_hex" : "0012",
+        "message_id_hex" : "0014",
         "column_headers" : ["packetIndex","packetTimestamp","bsm id","secMark","latency","latitude","longitude","speed(m/s)","heading","elevation(m)","accel_long(m/s^2)"],
     },
     "SPAT" : {
@@ -127,7 +127,7 @@ message_types = {
     "MAP" : {
         "name" : "MAP",
         "message_spec" : "J2735",
-        "message_id_hex" : "0014",
+        "message_id_hex" : "0012",
         "column_headers" : ["packetIndex","packetTimestamp","intersectionID"],
     },
     "Mobility-Request" : {
