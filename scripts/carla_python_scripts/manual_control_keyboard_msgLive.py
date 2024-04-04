@@ -244,8 +244,8 @@ class World(object):
         self.hud.notification(actor_type)
 
         # settign up PID controller
-        args_lateral = {'K_P': 1.95/1, 'K_D': 0.2/2, 'K_I': 0.1, 'dt': 0.1}
-        args_longitudinal = {'K_P': 1.0*3.5, 'K_D': 0.02, 'K_I': 0.05, 'dt': 0.08}
+        args_lateral = {'K_P': 1.99/1, 'K_D': 0.2/2, 'K_I': 0.1, 'dt': 0.1}
+        args_longitudinal = {'K_P': 1.0*1, 'K_D': 0.02, 'K_I': 0.02, 'dt': 0.1}
         self.PID = VehiclePIDController(self.player, args_lateral, args_longitudinal)
 
     def next_weather(self, reverse=False):
@@ -1160,7 +1160,7 @@ def game_loop(args):
         run_step = 0
 
         while True:
-            clock.tick_busy_loop(30)
+            clock.tick_busy_loop(60)
 
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
@@ -1175,7 +1175,10 @@ def game_loop(args):
                 # Loop: a sub-process for info? another node to make sure data coming in
 
                 reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
-                SPaT_flag, spatInfo = process_SPaT(hex_data)
+                try:
+                    SPaT_flag, spatInfo = process_SPaT(hex_data)
+                except:
+                    SPaT_flag, spatInfo = False, {}
 
                 #ref_trans = world.player.get_transform()
                 ref_rotation = world.player.get_transform().rotation
@@ -1190,8 +1193,8 @@ def game_loop(args):
                         print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
                         ref_trans = actor.get_transform()
                 '''
-                data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
-                hex_data = data.hex()
+                #data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
+                #hex_data = data.hex()
                 BSM_flag, x1, y1, speed = process_BSM(hex_data)
 
                 if BSM_flag is True:
@@ -1233,9 +1236,12 @@ def game_loop(args):
                 #x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
                 #speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
                 #accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
-                spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4
+                spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
+                #spacing = 10
                 #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2)
                 speed_diff = speed - speed_ego
+                #speed_diff = 1
+                #speed = speed_ego+1 
 
                 #print(dist2bar)
                 
