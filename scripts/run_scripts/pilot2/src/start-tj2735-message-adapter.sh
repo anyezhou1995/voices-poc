@@ -29,32 +29,47 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
         scenario_config_link_dest=$(readlink -f $voices_scenario_config)
         scenario_link_base_name=$(basename ${scenario_config_link_dest})
 
-        source $voices_site_config
-        source $voices_scenario_config
+        source $HOME/.voices_site_config
 
-        echo "Site Config: "$VUG_SITE_CONFIG_FILE
-        echo "Scenario Config: "$VUG_SCENARIO_CONFIG_FILE
+		# if voices config docker exists, then source it to overwrite docker specific vars
+		if [ -e ${voices_site_config_docker} ]; then
+			source $HOME/.voices_site_config_docker
+		fi
+
+		source $HOME/.voices_scenario_config
+
+		if [ -e ${voices_scenario_config_docker} ]; then
+			source $HOME/.voices_scenario_config_docker
+		fi
+
+        echo "Site Config: "$site_link_base_name
+        echo "Scenario Config: "$scenario_link_base_name
     else
         echo "[!!!] .voices_site_config or .voices_scenario_config link is broken"
-        echo "Site Config: "$(readlink -f $voices_site_config)
-        echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+        echo "Site Config: "$(readlink -f $site_link_base_name)
+        echo "Scenario Config: "$(readlink -f $scenario_link_base_name)
         exit 1
    fi
 elif [ -e ${voices_site_config} ] || [ -e ${voices_site_config} ]; then
     echo "[!!!] .voices_site_config or .voices_scenario_config file is not a symbolic link"
-    echo "Site Config: "$(readlink -f $voices_site_config)
-    echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+    echo "Site Config: "$(readlink -f $site_link_base_name)
+    echo "Scenario Config: "$(readlink -f $scenario_link_base_name)
     exit 1
 else
     echo "[!!!] .voices_site_config or .voices_scenario_config symbolic link does not exist"
-    echo "Site Config: "$(readlink -f $voices_site_config)
-    echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+    echo "Site Config: "$(readlink -f $site_link_base_name)
+    echo "Scenario Config: "$(readlink -f $scenario_link_base_name)
     exit 1
 fi
 
 localadapterPath=$VUG_LOCAL_INSTALL_PATH/$VUG_J2735_ADAPTER_VERSION
 
 adapterVerbosity='1'
+
+useBestEffort=''
+if $VUG_USE_BEST_EFFORT; then
+    useBestEffort='-bestEffort'
+fi
 
 mkdir -p $VUG_ADAPTER_LOG_PATH
 
@@ -69,4 +84,4 @@ exec 4>> $adapterLogFile
 # redirect trace logs to fd 4
 BASH_XTRACEFD=4
 
-$localadapterPath/bin/tena-j2735-message-adapter -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -adapterSendEndpoint $VUG_J2735_ADAPTER_SEND_ADDRESS:$VUG_J2735_ADAPTER_SEND_PORT -adapterReceiveEndpoint $VUG_J2735_ADAPTER_RECEIVE_ADDRESS:$VUG_J2735_ADAPTER_RECEIVE_PORT -verbosity $adapterVerbosity | tee -a $adapterLogFile
+$localadapterPath/bin/tena-j2735-message-adapter $useBestEffort -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -adapterSendEndpoint $VUG_J2735_ADAPTER_SEND_ADDRESS:$VUG_J2735_ADAPTER_SEND_PORT -adapterReceiveEndpoint $VUG_J2735_ADAPTER_RECEIVE_ADDRESS:$VUG_J2735_ADAPTER_RECEIVE_PORT -verbosity $adapterVerbosity | tee -a $adapterLogFile

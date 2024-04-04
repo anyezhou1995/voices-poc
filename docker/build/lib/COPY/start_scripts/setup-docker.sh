@@ -25,22 +25,29 @@ env_set_scenario_config_path=$HOME/voices-poc/config/scenario_config/$VUG_SCENAR
 export SUMO_HOME=/usr/share/sumo
 
 if [ ! -f $env_set_site_config_path ]; then
-        echo "    [!!!] Site Config file not found: $VUG_SITE_CONFIG_FILE"
+        echo "    [!!!] Site Config file not found: $env_set_site_config_path"
         exit 1
 elif [ ! -f $env_set_scenario_config_path ]; then
-        echo "    [!!!] Scenario Config file not found: $VUG_SCENARIO_CONFIG_FILE"
+        echo "    [!!!] Scenario Config file not found: $env_set_scenario_config_path"
         exit 1
 else
         ln -sf $env_set_site_config_path $HOME/.voices_site_config_link
         ln -sf $env_set_scenario_config_path $HOME/.voices_scenario_config_link
-        ln -sf $HOME/.voices_site_config_docker $HOME/.voices_site_config
-        ln -sf $HOME/.voices_scenario_config_docker $HOME/.voices_scenario_config
+      #   ln -sf $HOME/.voices_site_config_docker $HOME/.voices_site_config
+      #   ln -sf $HOME/.voices_scenario_config_docker $HOME/.voices_scenario_config
 fi
 
-voices_site_config=$HOME/.voices_site_config_link
-voices_scenario_config=$HOME/.voices_scenario_config_link
-voices_site_config_base=$HOME/.voices_site_config
-voices_scenario_config_base=$HOME/.voices_scenario_config
+# voices_site_config=$HOME/.voices_site_config_link
+# voices_scenario_config=$HOME/.voices_scenario_config_link
+
+voices_site_config=$HOME/.voices_site_config
+voices_scenario_config=$HOME/.voices_scenario_config
+
+ln -sf $HOME/.voices_site_config_link $voices_site_config
+ln -sf $HOME/.voices_scenario_config_link $voices_scenario_config
+
+voices_site_config_docker=$HOME/.voices_site_config_docker
+voices_scenario_config_docker=$HOME/.voices_scenario_config_docker
 
 if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
    if [ -e ${voices_site_config} ] && [ -e ${voices_scenario_config} ]; then
@@ -51,8 +58,18 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
       scenario_link_base_name=$(basename ${scenario_config_link_dest})
       
       source $HOME/.voices_site_config
+
+      # if voices config docker exists, then source it to overwrite docker specific vars
+      if [ -e ${voices_site_config_docker} ]; then
+         source $HOME/.voices_site_config_docker
+      fi
+
       source $HOME/.voices_scenario_config
 
+      if [ -e ${voices_scenario_config_docker} ]; then
+         source $HOME/.voices_scenario_config_docker
+      fi
+      
       echo "Site Config: "$site_link_base_name
       echo "Scenario Config: "$scenario_link_base_name
    else

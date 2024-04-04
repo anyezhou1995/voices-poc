@@ -11,9 +11,6 @@ services:
       - VUG_CONTAINER_IMAGE=carla-voices
       - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
       - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
-    env_file:
-      - ${HOME}/.voices_site_config
-      - ${HOME}/.voices_scenario_config
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${VUG_LOCAL_VOICES_POC_PATH}:/home/carla/voices-poc
@@ -40,9 +37,6 @@ services:
       - VUG_CONTAINER_IMAGE=voices
       - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
       - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
-    env_file:
-      - ${HOME}/.voices_site_config
-      - ${HOME}/.voices_scenario_config
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${VUG_LOCAL_VOICES_POC_PATH}:/home/voices-poc

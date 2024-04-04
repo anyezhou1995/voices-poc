@@ -23,8 +23,8 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
         source $voices_site_config
         source $voices_scenario_config
 
-        echo "Site Config: "$VUG_SITE_CONFIG_FILE
-        echo "Scenario Config: "$VUG_SCENARIO_CONFIG_FILE
+        echo "Site Config: "$voices_site_config
+        echo "Scenario Config: "$voices_scenario_config
     else
         echo "[!!!] .voices_site_config or .voices_scenario_config link is broken"
         echo "Site Config: "$(readlink -f $voices_site_config)

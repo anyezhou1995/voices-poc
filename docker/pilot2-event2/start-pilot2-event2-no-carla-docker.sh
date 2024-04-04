@@ -11,7 +11,7 @@ $docker_compose_cmd -f $docker_compose_file down
 
 }
 
-voices_site_config=$HOME/.voices_site_config
+voices_scenario_config=$HOME/.voices_site_config
 voices_scenario_config=$HOME/.voices_scenario_config
 
 if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
@@ -24,9 +24,10 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
 
         source $voices_site_config
         source $voices_scenario_config
-
-        echo "Site Config: "$VUG_SITE_CONFIG_FILE
-        echo "Scenario Config: "$VUG_SCENARIO_CONFIG_FILE
+        export VUG_SITE_CONFIG_FILE=$voices_site_config
+        export VUG_SCENARIO_CONFIG_FILE=$voices_scenario_config
+        echo "Site Config: "$voices_scenario_config
+        echo "Scenario Config: "$voices_scenario_config
     else
         echo "[!!!] .voices_site_config or .voices_scenario_config link is broken"
         echo "Site Config: "$(readlink -f $voices_site_config)

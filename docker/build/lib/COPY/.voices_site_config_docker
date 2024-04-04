@@ -1,6 +1,6 @@
 # SPECIAL DOCKER VUG_CONFIG TO OVERWRITE DOCKER DIRECTORIES
 
-source $HOME/.voices_site_config_link
+# source $HOME/.voices_site_config_link
 
 export VUG_LOCAL_TENADEV_DIR=$HOME
 export VUG_LOCAL_INSTALL_PATH=$HOME/VUG_Adapters

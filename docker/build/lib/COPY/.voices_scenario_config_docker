@@ -1,6 +1,6 @@
 # SPECIAL DOCKER VUG_CONFIG TO OVERWRITE DOCKER DIRECTORIES
 
-source $HOME/.voices_scenario_config_link
+# source $HOME/.voices_scenario_config_link
 
 if [ $VUG_CONTAINER_IMAGE == "voices" ]; then
     source $VUG_TENA_SOURCE_SCRIPT_FILE

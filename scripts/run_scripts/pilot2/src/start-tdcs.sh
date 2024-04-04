@@ -29,26 +29,36 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
         scenario_config_link_dest=$(readlink -f $voices_scenario_config)
         scenario_link_base_name=$(basename ${scenario_config_link_dest})
 
-        source $voices_site_config
-        source $voices_scenario_config
+        source $HOME/.voices_site_config
 
-        echo "Site Config: "$VUG_SITE_CONFIG_FILE
-        echo "Scenario Config: "$VUG_SCENARIO_CONFIG_FILE
+		# if voices config docker exists, then source it to overwrite docker specific vars
+		if [ -e ${voices_site_config_docker} ]; then
+			source $HOME/.voices_site_config_docker
+		fi
+
+		source $HOME/.voices_scenario_config
+
+		if [ -e ${voices_scenario_config_docker} ]; then
+			source $HOME/.voices_scenario_config_docker
+		fi
+
+        echo "Site Config: "$site_link_base_name
+        echo "Scenario Config: "$scenario_link_base_name
     else
         echo "[!!!] .voices_site_config or .voices_scenario_config link is broken"
-        echo "Site Config: "$(readlink -f $voices_site_config)
-        echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+        echo "Site Config: "$(readlink -f $site_link_base_name)
+        echo "Scenario Config: "$(readlink -f $scenario_link_base_name)
         exit 1
    fi
 elif [ -e ${voices_site_config} ] || [ -e ${voices_site_config} ]; then
     echo "[!!!] .voices_site_config or .voices_scenario_config file is not a symbolic link"
-    echo "Site Config: "$(readlink -f $voices_site_config)
-    echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+    echo "Site Config: "$(readlink -f $site_link_base_name)
+    echo "Scenario Config: "$(readlink -f $scenario_link_base_name)
     exit 1
 else
     echo "[!!!] .voices_site_config or .voices_scenario_config symbolic link does not exist"
-    echo "Site Config: "$(readlink -f $voices_site_config)
-    echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+    echo "Site Config: "$(readlink -f $site_link_base_name)
+    echo "Scenario Config: "$(readlink -f $scenario_link_base_name)
     exit 1
 fi
 
@@ -57,6 +67,11 @@ adapterVerbosity='4'
 mkdir -p $VUG_ADAPTER_LOG_PATH
 
 adapterLogFile=$VUG_ADAPTER_LOG_PATH/scenario_publisher_terminal_out.log
+
+useBestEffort=''
+if $VUG_USE_BEST_EFFORT; then
+    useBestEffort='-bestEffort'
+fi
 
 echo "<< ***** Adapter Started **** >>" > $adapterLogFile
 date >> $adapterLogFile
@@ -82,4 +97,4 @@ timestamp=$(date -d "today" +"%Y%m%d%H%M%S")
 
 tdcs_file_name=$VUG_SIM_ID'_'$timestamp
 
-$VUG_TDCS_PATH/start.sh -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -databaseName $tdcs_file_name.sqlite -dbFolder .
+$VUG_TDCS_PATH/start.sh $useBestEffort -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -databaseName $tdcs_file_name.sqlite -dbFolder .
