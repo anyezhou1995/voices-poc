@@ -148,7 +148,7 @@ docker exec \
             town:=\"$carla_map\" \
             selected_route:=\"$VUG_CARMA_ROUTE\" \
             synchronous_mode:='true' \
-            fixed_delta_seconds:='0.08' \
+            fixed_delta_seconds:='0.10' \
             use_sim_time:='true' \
             speed_Kp:=0.4 \
             speed_Ki:=0.03 \

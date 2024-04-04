@@ -107,10 +107,6 @@ fi
 #(live vehicle is not connected to VOICES network)
 
 
-if [[ $isCarmaVehicle == ^[yY]$ ]]; then
-    trap copyCarmaLogs SIGINT
-fi
-
 copyCarmaLogs()
 {
     echo
@@ -147,6 +143,10 @@ copyCarmaLogs()
 
     exit
 }
+
+if [[ $isCarmaVehicle =~ ^[yY]$ ]]; then
+    trap copyCarmaLogs SIGINT
+fi
 
 
 echo

@@ -67,7 +67,7 @@ localadapterPath=$VUG_LOCAL_INSTALL_PATH/$VUG_J3224_ADAPTER_VERSION
 adapterVerbosity='1'
 
 useBestEffort=''
-if $VUG_USE_BEST_EFFORT; then
+if [[ $VUG_USE_BEST_EFFORT == true ]]; then
     useBestEffort='-bestEffort'
 fi
 
