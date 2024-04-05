@@ -32,16 +32,17 @@ done <<< "$text"
 
 if [ $has_multiple_active_vpn_connections = false ] && [ $has_active_vpn_connection = true ]; then
     while true; do
-        read -p "Would you like to end your VPN session? [Y/n] " yn
+        echo ''
+        read -p "Would you like to end your VPN session? [y/N] " yn
         case $yn in
-            [Yy]* | "") for i in $(seq 1 ${#vpn_statuses[@]}); do
+            [Yy]*) for i in $(seq 1 ${#vpn_statuses[@]}); do
                         if [ ${vpn_statuses[i-1]} = 1 ]
                         then
                             echo "Removing "${vpn_paths[i-1]}
                             sudo openvpn3 session-manage --session-path ${vpn_paths[i-1]} --disconnect
                         fi
                     done; break;;
-            [Nn]* ) echo 'no'; break;;
+            [Nn]* | "") echo ''; break;;
             * );;
         esac
     done

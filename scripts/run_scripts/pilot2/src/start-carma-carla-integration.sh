@@ -23,6 +23,9 @@ function print_help {
 voices_site_config=$HOME/.voices_site_config
 voices_scenario_config=$HOME/.voices_scenario_config
 
+voices_site_config_docker=$HOME/.voices_site_config_docker
+voices_scenario_config_docker=$HOME/.voices_scenario_config_docker
+
 if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
     if [ -e ${voices_site_config} ] && [ -e ${voices_scenario_config} ]; then
         site_config_link_dest=$(readlink -f $voices_site_config)
@@ -129,14 +132,10 @@ done
 echo "----- STARTING CARLA-CARMA INTEGRATION TOOL -----"
 
 docker run \
-	   -it -d --rm \
-       --name carma_carla_integration \
-       --net=host \
-       usdotfhwastoldev/carma-carla-integration:vug-fds-fix-logs
-echo "------------------------exec---------------------------------"
-docker exec \
-        -it \
-        carma_carla_integration \
+        -it -d --rm \
+        --name carma_carla_integration \
+        --net=host \
+        usdotfhwastoldev/carma-carla-integration:vug-fds-fix-logs \
         bash -c \
         "export ROS_IP=127.0.0.1 && \
         export ROS_MASTER_URI=http://localhost:11311 && \
@@ -157,6 +156,13 @@ docker exec \
             role_name:='carma_1'" \
     &> $SIM_LOG
 
-
+while true; do
+        echo ''
+        read -p "Enter q to exit " quit
+        case $quit in
+            q ) break;;
+            * );;
+        esac
+    done
 
 cleanup

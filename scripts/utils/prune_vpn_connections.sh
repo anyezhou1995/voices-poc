@@ -39,6 +39,7 @@ done <<< "$text"
 if $has_stale_vpn_connections
 then
     while true; do
+        echo ''
         read -p "You have stale VPN connections. Would you like to remove them? [Y/n] " yn
         case $yn in
             [Yy]* | "") for i in $(seq 1 ${#vpn_statuses[@]}); do
@@ -48,7 +49,7 @@ then
                             sudo openvpn3 session-manage --session-path ${vpn_paths[i-1]} --disconnect
                         fi
                     done; break;;
-            [Nn]* ) echo 'no'; break;;
+            [Nn]* ) echo ''; break;;
             * );;
         esac
     done
@@ -67,6 +68,7 @@ then
         fi
     done 
     while true; do
+        echo ''
         read -p "You have multiple active VPN connections. Would you like to remove all but the most recent? [Y/n] " yn
         case $yn in
             [Yy]* | "") for i in $(seq 1 ${#vpn_statuses[@]}); do
@@ -76,7 +78,7 @@ then
                             sudo openvpn3 session-manage --session-path ${vpn_paths[i-1]} --disconnect
                         fi
                     done; break;;
-            [Nn]* ) echo 'no'; break;;
+            [Nn]* ) echo ''; break;;
             * );;
         esac
     done
