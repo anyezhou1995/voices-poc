@@ -1236,7 +1236,7 @@ def game_loop(args):
                 #x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
                 #speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
                 #accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
-                spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
+                spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 5
                 #spacing = 10
                 #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2)
                 speed_diff = speed - speed_ego
