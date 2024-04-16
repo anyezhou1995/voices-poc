@@ -19,9 +19,9 @@
             <!-- <CARLA manual="true" generate_bsms="false"></CARLA> -->
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=139.3627471923828 y=-228.6690216064453 yaw=166.89 -->
-            <Heading>256.89</Heading>
+            <GeodeticPosition latitudeInDegrees="42.30264841495023" longitudeInDegrees="-83.69746440306264" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=149.74896240234375 y=-228.76519775390625 yaw=188.8 -->
+            <Heading>278.8</Heading>
         </initialTSPI>
     </vehicle>
 
@@ -83,9 +83,9 @@
             <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-CAV-01" generate_bsms="true"/>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.30264841495023" longitudeInDegrees="-83.69746440306264" heightAboveEllipsoidInMeters="250"/>
-            <!-- x=149.74896240234375 y=-228.76519775390625 yaw=188.8 -->
-            <Heading>278.8</Heading>
+            <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=139.3627471923828 y=-228.6690216064453 yaw=166.89 -->
+            <Heading>256.89</Heading>
         </initialTSPI>
     </vehicle>
 

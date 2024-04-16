@@ -1,8 +1,49 @@
 #
-# BUILD COMMAND: VERSION=0.0.9 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t usdotfhwastoldev/carla-voices:pilot2-event2-$VERSION . --progress=plain -f carla-voices_Dockerfile
+# BUILD COMMAND: VERSION=0.0.9 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t usdotfhwastoldev/voices:pilot2-event2-$VERSION . --progress=plain -f pilot2-event2_Dockerfile
 #
 
+FROM ubuntu:20.04 as build
+
+SHELL ["/bin/bash", "-ec"]
+
+USER root
+ARG DEBIAN_FRONTEND="noninteractive"
+ARG TZ="America/New_York"
+ARG USER="root"
+
+RUN apt update && \
+    apt install -y python3-pip
+
+RUN pip3 install gdown
+
+WORKDIR /home
+
+RUN gdown --id 1MtXDPeIO6S4EsKRPqryDn-DvKe5t4QER
+RUN gdown --id 1C04vOrIOuO3Mr2MhceBv7xQ1mGRmGnPd
+RUN gdown --id 1WS0KFmji8DR_K2ECelfpbdu_yH-iliyr
+RUN gdown --id 10RaCptmxrcWPoEgWsPy8I2DrBeVWsnEG
+RUN gdown --id 17UovGmLGn7VPo4vUNAw5dh7Po_Y_Ukx-
+
+RUN chmod a+x ./*.bin
+RUN chmod a+x ./*.deb
+
+# INSTALL TENA bin
+RUN /home/TENA-MiddlewareSDK-v6.0.8.B@Product@u2004-gcc9-64-*.bin -i /home/ --auto && \
+    /home/VUG-Combined-Distribution-*.bin -i /home/ --auto && \
+    /home/VUG-Combined-DataCollectionDistribution-*.bin -i /home/ --auto && \
+    rm -rf /tmp/*
+
+# INSTALL TENA deb
+RUN apt install -o DPkg::options::=--force-overwrite \
+    /home/TENA-Console-v2.0.1@Product@u2004-gcc9-64-*.deb \
+    /home/TDCS-DataView-v1.5.4@Product@u2004-gcc9-64-*.deb && \
+    # Fix permissions for installed TENA apps
+    chmod -R a+rw /opt/TENA
+
 FROM ubuntu:20.04
+
+COPY --from=build /home/TENA /home/TENA
+COPY --from=build /opt/TENA /opt/TENA
 
 LABEL version=${VERSION}
 LABEL description="VOICES Docker image for Pilot 2 Event 2"
@@ -16,23 +57,8 @@ ARG USER="root"
 
 WORKDIR /home
 
-# INSTALL TENA bin
 
-RUN --mount=type=bind,target=/home/BUILD,readonly,source=lib/BUILD \
-    /home/BUILD/TENA-MiddlewareSDK-v6.0.8.B@Product@u2004-gcc9-64-*.bin -i /home/ --auto && \
-    /home/BUILD/VUG-Combined-Distribution-*.bin -i /home/ --auto && \
-    /home/BUILD/VUG-Combined-DataCollectionDistribution-*.bin -i /home/ --auto && \
-    rm -rf /tmp/*
 
-# INSTALL TENA deb
-
-RUN --mount=type=bind,target=/home/BUILD,readonly,source=lib/BUILD \
-    apt install -o DPkg::options::=--force-overwrite \
-    /home/BUILD/TENA-Console-v2.0.1@Product@u2004-gcc9-64-*.deb \
-    # /home/BUILD/VUG-Combined-DataCollectionDistribution-*.deb \
-    /home/BUILD/TDCS-DataView-v1.5.4@Product@u2004-gcc9-64-*.deb && \
-    # Fix permissions for installed TENA apps
-    chmod -R a+rw /opt/TENA
 
 # INSTALL apt packages 
 
@@ -54,6 +80,8 @@ RUN apt-get update && \
     iputils-ping nano tshark git tcpdump \
     # install sumo tools
     sumo=1.19.0-1~focal sumo-tools=1.19.0-1~focal sumo-doc=1.19.0-1~focal \
+    # install dumb init to enable gracefully stopping container processes
+    dumb-init \
     # cleanup apt lists
     && rm -rf /var/lib/apt/lists/*
 
@@ -78,4 +106,4 @@ RUN rm -rf /home/BUILD /tmp/* && \
 RUN echo 'source /home/start_scripts/setup-docker.sh' >> /root/.bashrc
 
 
-CMD ["/bin/bash","-l","-c","/home/start_scripts/startup-apps.sh"]
+CMD ["/usr/bin/dumb-init","-v","--","/bin/bash","-l","-c","/home/start_scripts/startup-apps.sh"]

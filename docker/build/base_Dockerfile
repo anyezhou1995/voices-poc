@@ -2,7 +2,29 @@
 # BUILD COMMAND: VERSION=0.0.1 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t usdotfhwastoldev/voices:base-$VERSION . --progress=plain -f base_Dockerfile
 #
 
+FROM ubuntu:20.04 as build
+
+RUN apt update && \
+    apt install -y python3-pip
+
+RUN pip3 install gdown
+
+WORKDIR /home
+
+RUN gdown --id 10RaCptmxrcWPoEgWsPy8I2DrBeVWsnEG
+    
+RUN gdown --id 17UovGmLGn7VPo4vUNAw5dh7Po_Y_Ukx-
+
+RUN chmod a+x ./*.bin
+
+RUN /home/TENA-MiddlewareSDK-v6.0.8.B@Product@u2004-gcc9-64-*.bin -i /home/ --auto && \
+/home/VUG-Combined-Distribution-*.bin -i /home/ --auto && \
+# /home/BUILD/VUG-Combined-DataCollectionDistribution-*.bin -i /home/ --auto && \
+rm -rf /tmp/*
+
 FROM ubuntu:20.04
+
+COPY --from=build /home/TENA /home/TENA
 
 LABEL version="0.0.1"
 LABEL description="Base VOICES Docker image with base tena installation"
@@ -18,63 +40,8 @@ WORKDIR /home
 
 # INSTALL TENA bin
 
-RUN --mount=type=bind,target=/home/BUILD,readonly,source=lib/BUILD \
-    /home/BUILD/TENA-MiddlewareSDK-v6.0.8.B@Product@u2004-gcc9-64-*.bin -i /home/ --auto && \
-    /home/BUILD/VUG-Combined-Distribution-*.bin -i /home/ --auto && \
-    # /home/BUILD/VUG-Combined-DataCollectionDistribution-*.bin -i /home/ --auto && \
-    rm -rf /tmp/*
+# RUN /home/BUILD/TENA-MiddlewareSDK-v6.0.8.B@Product@u2004-gcc9-64-*.bin -i /home/ --auto && \
+#     /home/BUILD/VUG-Combined-Distribution-*.bin -i /home/ --auto && \
+#     # /home/BUILD/VUG-Combined-DataCollectionDistribution-*.bin -i /home/ --auto && \
+#     rm -rf /tmp/*
 
-# INSTALL TENA deb
-
-# RUN --mount=type=bind,target=/home/BUILD,readonly,source=lib/BUILD \
-#     apt install -o DPkg::options::=--force-overwrite \
-#     /home/BUILD/TENA-Console-v2.0.1@Product@u2004-gcc9-64-*.deb \
-#     /home/BUILD/TDCS-DataView-v1.5.4@Product@u2004-gcc9-64-*.deb && \
-#     # Fix permissions for installed TENA apps
-#     chmod -R a+rw /opt/TENA
-
-# INSTALL apt packages 
-
-    
-# RUN apt-get update && \
-#     # add sumo repo 
-#     apt install -y software-properties-common && \
-#     add-apt-repository ppa:sumo/stable && apt-get update && \
-#     apt install -y \
-#     # install apt utils for installing packages (mostly for TENA console)
-#     apt-utils \
-#     # install boost
-#     libboost-all-dev \
-#     # install qt packages
-#     libxcb-xinerama0 libfreetype6 libfontconfig libsm6 libxi6 libx11-xcb-dev libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-sync1 libxcb-xfixes0 libxcb-xkb1 libxkbcommon-x11-0 libjpeg8 libtiff5 \
-#     # install pip
-#     python3-pip \
-#     # install debug tools
-#     iputils-ping nano tshark git \
-#     # install sumo tools
-#     sumo=1.19.0-1~focal sumo-tools=1.19.0-1~focal sumo-doc=1.19.0-1~focal \
-#     # cleanup apt lists
-#     && rm -rf /var/lib/apt/lists/*
-
-# INSTALL python packages
-
-# RUN pip install numpy pygame pycrate traci lxml networkx pynput && \
-#     # have to install pandas separately because it requires a specific version of numpy
-#     pip install pandas && \
-#     rm -rf /root/.cache
-
-# COPY ./lib/COPY /home
-
-# # Make Start Scripts executable
-
-# RUN chmod a+x -R /home/start_scripts/
-
-# # CLEANUP
-
-# RUN rm -rf /home/BUILD /tmp/* && \
-#     apt-get -qy autoremove
-
-# RUN echo 'source /home/start_scripts/setup-docker.sh' >> /root/.bashrc
-
-
-# CMD ["/bin/bash","-l","-c","/home/start_scripts/startup-apps.sh"]

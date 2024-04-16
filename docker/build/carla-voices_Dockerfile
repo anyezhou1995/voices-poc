@@ -14,14 +14,14 @@ SHELL ["/bin/bash", "-ec"]
 ARG DEBIAN_FRONTEND="noninteractive" 
 ARG TZ="America/New_York"
 
-RUN --mount=type=bind,target=./Import,readonly,source=../lib/MAPS \
+RUN --mount=type=bind,target=./Import,readonly,source=./lib/MAPS \
     sed -i 's/--keep-newer-files/--skip-old-files/' ImportAssets.sh && \
     ./ImportAssets.sh 
 
-COPY ../lib/COPY/start_scripts /home/carla/start_scripts
-COPY ../lib/COPY/.voices_site_config_docker /home/carla/.voices_site_config_docker
-COPY ../lib/COPY/.voices_scenario_config_docker /home/carla/.voices_scenario_config_docker
-COPY ../lib/COPY/VOICES_Limited_License_V0.2.pdf /home/carla/VOICES_Limited_License_V0.2.pdf
+COPY ./lib/COPY/start_scripts /home/carla/start_scripts
+COPY ./lib/COPY/.voices_site_config_docker /home/carla/.voices_site_config_docker
+COPY ./lib/COPY/.voices_scenario_config_docker /home/carla/.voices_scenario_config_docker
+COPY ./lib/COPY/VOICES_Limited_License_V0.2.pdf /home/carla/VOICES_Limited_License_V0.2.pdf
 
 USER root
 

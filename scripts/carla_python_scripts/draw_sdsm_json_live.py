@@ -177,7 +177,7 @@ def draw_sdsm(sdsm_json):
     # print("\tvru_x: " + str(vru_x))
     # print("\tvru_y: " + str(vru_y))
 
-    box_center = carla.Location(x=vru_x, y=vru_y, z=draw_z_height)
+    box_center = carla.Location(x=vru_x, y=vru_y, z=draw_z_height) + carla.Location(x=0, y=0, z=1)
 
     vru_box = carla.BoundingBox(box_center,carla.Vector3D(1.5,1.5,0))
 
@@ -232,7 +232,7 @@ try:
     #         color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
     #         persistent_lines=True)
 
-    UDP_IP = "192.168.1.90"
+    UDP_IP = "192.168.55.230"
     UDP_PORT = 5399
 
     sock = socket.socket(   socket.AF_INET, # Internet

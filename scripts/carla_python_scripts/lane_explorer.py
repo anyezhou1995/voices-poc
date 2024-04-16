@@ -152,7 +152,7 @@ def main():
         print("Initial location: ", loc)
 
         current_w = m.get_waypoint(loc)
-
+        # print(current_w) - Varun
         # main loop
         while True:
             # list of potential next waypoints

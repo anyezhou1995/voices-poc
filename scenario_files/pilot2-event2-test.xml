@@ -13,9 +13,9 @@
 
   <vehicles>
 
-    <vehicle name="carma_1" bsmid="f03ad620" type="vehicle.toyota.prius" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="carma_1" bsmid="f03ad620" type="vehicle.toyota.prius" owner="CARLA-FHWA-1" material="Aluminum" lvcIndicator="Live">
         <userData>
-            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="carma_1"/>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-1" roleName="carma_1"/>
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>

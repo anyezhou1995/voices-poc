@@ -16,6 +16,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${VUG_LOCAL_VOICES_POC_PATH}:/home/carla/voices-poc
+    stop_grace_period: 30s
     deploy:
       resources:
         reservations:
@@ -26,7 +27,7 @@ services:
 
   voices:
     container_name: voices
-    image: usdotfhwastoldev/voices:pilot2-event2-latest
+    image: usdotfhwastoldev/voices:pilot2-event2-0.0.14
     tty: true 
     depends_on:
       - carla-voices
@@ -48,6 +49,7 @@ services:
       - /dev/bus/usb:/dev/bus/usb
     devices:
       - /dev/input:/dev/input
+    stop_grace_period: 30s
     deploy:
       resources:
         reservations:

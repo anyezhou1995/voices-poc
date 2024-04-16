@@ -2,7 +2,7 @@
 
 # source $HOME/.voices_site_config_link
 
-export VUG_LOCAL_TENADEV_DIR=$HOME
+export VUG_LOCAL_TENADEV_DIR=$HOME/tenadev
 export VUG_LOCAL_INSTALL_PATH=$HOME/VUG_Adapters
 export VUG_LOCAL_TENA_PATH=$HOME/TENA
 export VUG_LOCAL_TDCS_INSTALL_PATH=$HOME/TENA

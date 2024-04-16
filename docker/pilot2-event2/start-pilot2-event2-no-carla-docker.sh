@@ -8,12 +8,16 @@ stopDocker()
 echo
 echo STOPPING AND REMOVING VUG CONTAINERS
 $docker_compose_cmd -f $docker_compose_file down
-source $HOME/voices-poc/scripts/utils/stop_current_vpn_connection.sh
+source $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/stop_current_vpn_connection.sh../../config/site_config/tfhrc3.config
 }
 
-source $HOME/voices-poc/scripts/utils/prune_vpn_connections.sh
 
-voices_scenario_config=$HOME/.voices_site_config
+if ! $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/prune_vpn_connections.sh; then
+    exit 1
+fi
+
+
+voices_site_config=$HOME/.voices_site_config
 voices_scenario_config=$HOME/.voices_scenario_config
 
 if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
@@ -26,9 +30,9 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
 
         source $voices_site_config
         source $voices_scenario_config
-        export VUG_SITE_CONFIG_FILE=$voices_site_config
-        export VUG_SCENARIO_CONFIG_FILE=$voices_scenario_config
-        echo "Site Config: "$voices_scenario_config
+        export VUG_SITE_CONFIG_FILE=$site_link_base_name
+        export VUG_SCENARIO_CONFIG_FILE=$scenario_link_base_name
+        echo "Site Config: "$voices_site_config
         echo "Scenario Config: "$voices_scenario_config
     else
         echo "[!!!] .voices_site_config or .voices_scenario_config link is broken"

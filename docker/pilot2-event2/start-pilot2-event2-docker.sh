@@ -8,10 +8,14 @@ stopDocker()
 echo
 echo STOPPING AND REMOVING VUG CONTAINERS
 $docker_compose_cmd -f $docker_compose_file down
-source $HOME/voices-poc/scripts/utils/stop_current_vpn_connection.sh
+source $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/stop_current_vpn_connection.sh
 }
 
-source $HOME/voices-poc/scripts/utils/prune_vpn_connections.sh
+
+if ! $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/prune_vpn_connections.sh; then
+    exit 1
+fi
+ 
 
 voices_site_config=$HOME/.voices_site_config
 voices_scenario_config=$HOME/.voices_scenario_config
@@ -78,6 +82,51 @@ final_vpn_em_address=""
 vpn_interface_pattern="tun[0-9]"
 vpn_check=$(ip -br link show | awk '{print $1}' | grep -w "$vpn_interface_pattern")
 
+interfaces=($(ifconfig -a | grep -o '^[^ ]\+'))
+ip_addresses=($(ifconfig | grep -E 'inet ([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})' | awk '{print $2}'))
+tun_interfaces=()
+tun_ip_addresses=()
+for i in $(seq 1 ${#interfaces[@]}); do
+    if [ ${interfaces[i-1]:0:3} = "tun" ]
+    then
+        tun_interfaces+=(${interfaces[i-1]})
+        tun_ip_addresses+=(${ip_addresses[i-1]})
+    fi
+done
+# Prompt if there are multiple tun interfaces
+if [ "${#tun_interfaces[@]}" -gt 1  ]
+then
+    echo '' 
+    echo "Multiple tunnel interfaces were found."
+    for i in $(seq 1 ${#tun_interfaces[@]}); do
+        echo "      " ${tun_interfaces[i-1]} ${tun_ip_addresses[i-1]}
+    done
+    while true; do
+        echo ''
+        read -p "Which interface would you like to use? [0-9] " tun
+        case $tun in
+            [0-9])  vpn_check="tun$tun"; break;;
+            * );;
+        esac
+    done
+elif [ "${#tun_interfaces[@]}" = 1  ]
+then
+    echo '' 
+    echo "A single tunnel interface was found."
+    for i in $(seq 1 ${#tun_interfaces[@]}); do
+        echo "      " ${tun_interfaces[i-1]} ${tun_ip_addresses[i-1]}
+    done
+    while true; do
+        echo ''
+        read -p "Is this the correct interface? [Y/n] " yn
+        case $yn in
+            [Yy]*)  vpn_check=${tun_interfaces[0]} break;;
+            [Nn]* | "") echo ''; break;;
+            * );;
+        esac
+    done
+fi
+
 if [[ ! -z $vpn_check ]]; then
     echo
     echo "VPN interface found: $vpn_check"
@@ -102,17 +151,6 @@ if [[ ! -z $vpn_check ]]; then
         fi        
     fi
     
-    if [[ ! -z $vpn_local_ip_clean ]]; then
-
-        echo
-        read -p "Would you like to use the VPN IP as VUG_LOCAL_ADDRESS? ($vpn_local_ip_clean) [y/n] " use_local_vpn_ip
-    
-        if [[ $use_local_vpn_ip =~ ^[yY]$ ]]; then
-
-            final_vpn_local_address=$vpn_local_ip_clean
-        fi
-
-    fi
 
     em_fqdn_address=$(getent hosts em.voices-network.local | awk '{print $1}')
 
@@ -133,23 +171,10 @@ if [[ ! -z $vpn_check ]]; then
             em_fqdn_address=""
         fi        
     fi
-
-    if [[ ! -z $em_fqdn_address ]]; then
-
-        echo
-        read -p "Would you like to use the VPN IP as VUG_EM_ADDRESS? ($em_fqdn_address) [y/n] " use_em_vpn_ip
-    
-        if [[ $use_em_vpn_ip =~ ^[yY]$ ]]; then
-
-            final_vpn_em_address=$em_fqdn_address
-        fi
-
-    fi
-
 fi
 
-export VUG_VPN_LOCAL_ADDRESS=$final_vpn_local_address
-export VUG_VPN_EM_ADDRESS=$final_vpn_em_address
+export VUG_VPN_LOCAL_ADDRESS=$vpn_local_ip_clean
+export VUG_VPN_EM_ADDRESS=$em_fqdn_address
 
 echo
 

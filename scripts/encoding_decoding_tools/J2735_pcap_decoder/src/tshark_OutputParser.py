@@ -173,12 +173,14 @@ open(outfile, 'w', newline='') as write_obj:
             if fixed_header_mode:
                 final_message_type_id = current_packet_data[84:88]
                 final_message_type_obj = next((x for x in message_type_list if x["id"] == final_message_type_id), None)
-                final_message_type_name = final_message_type_obj["name"]
-                final_j2735_payload_cleaned = current_packet_data[84:]
-
+                
                 if final_message_type_obj == None:
                     print("\nERROR: INVALID PAYLOAD TYPE FOR FIXED HEADER MODE. UNABLE TO IDENTIFY PACKET")
                     print("[" + str(packet_index)+'] ' + str(current_packet_data))
+                    continue
+
+                final_message_type_name = final_message_type_obj["name"]
+                final_j2735_payload_cleaned = current_packet_data[84:]
 
             # print("\nfinal_message_type_id: " + final_message_type_id)
             # print("final_message_type_name: " + final_message_type_name)

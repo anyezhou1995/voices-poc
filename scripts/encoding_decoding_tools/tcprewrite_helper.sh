@@ -33,12 +33,13 @@ while true; do
 done
 pcap_outfile="rewrite_"$pcap_file_to_read
 
-source_ip="192.168.1.90"
-source_mac="52:54:00:b9:4a:db"
-dest_ip="192.168.1.80"
-dest_mac="04:d4:c4:5b:66:92"
-old_dest_port="5398"
-new_dest_port="5398"
+source_ip="192.168.55.146"
+source_mac="00:0c:29:26:34:29" # v2xhub 146
+dest_ip="192.168.55.236"
+# dest_mac=04:d4:c4:5b:66:92 # voices lambda
+dest_mac="a8:a1:59:98:44:e2" # voices 3
+old_dest_port="56700"
+new_dest_port="56700"
 
 
 echo
