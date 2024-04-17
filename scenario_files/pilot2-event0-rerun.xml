@@ -13,7 +13,7 @@
 
   <vehicles>
 
-    <vehicle name="FHWA-3" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA-MAN-3" bsmid="f03ad619" type="vehicle.audi.etron" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -24,7 +24,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="UCLA-1" bsmid="f03ad620" type="vehicle.bmw.isetta" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="UCLA-MAN-1" bsmid="f03ad620" type="vehicle.mustang.mustang" owner="CARLA-UCLA-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -49,7 +49,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="ECON-1" bsmid="f03ad621" type="vehicle.seat.leon" owner="CARLA-ECON-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ECON-MAN-1" bsmid="f03ad621" type="vehicle.seat.leon" owner="CARLA-ECON-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -60,7 +60,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="VW-1" bsmid="f03ad622" type="vehicle.audi.a2" owner="CARLA-VW-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="VW-MAN-1" bsmid="f03ad622" type="vehicle.audi.a2" owner="CARLA-VW-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -71,7 +71,7 @@
         </initialTSPI>
     </vehicle>
 
-    <!-- <vehicle name="VW-2" bsmid="f03ad622" type="vehicle.audi.tt" owner="CARLA-VW-2" material="Aluminum" lvcIndicator="Live"> -->
+    <!-- <vehicle name="VW-MAN-2" bsmid="f03ad622" type="vehicle.audi.tt" owner="CARLA-VW-2" material="Aluminum" lvcIndicator="Live"> -->
         <!-- <userData> -->
             <!-- <CARLA manual="true" generate_bsms="true"></CARLA> -->
         <!-- </userData> -->
@@ -82,7 +82,7 @@
         <!-- </initialTSPI> -->
     <!-- </vehicle> -->
 
-    <vehicle name="ANL-1" bsmid="f03ad623" type="vehicle.nissan.micra" owner="CARLA-ANL-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ANL-MAN-1" bsmid="f03ad623" type="vehicle.nissan.micra" owner="CARLA-ANL-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -93,7 +93,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="MCITY-1" bsmid="f03ad624" type="vehicle.citroen.c3" owner="CARLA-MCITY-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="MCITY-MAN-2" bsmid="f03ad624" type="vehicle.citroen.c3" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -104,7 +104,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="TTS-1" bsmid="f03ad625" type="vehicle.mini.cooperst" owner="CARLA-TTS-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="TTS-MAN-1" bsmid="f03ad625" type="vehicle.mini.cooperst" owner="CARLA-TTS-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -115,7 +115,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="ORNL-1" bsmid="f03ad627" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ORNL-MAN-1" bsmid="f03ad627" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Live">
         <userData>
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
@@ -127,9 +127,9 @@
     </vehicle>
 
 
-    <vehicle name="FHWA-SUMO-01" bsmid="f03ad628" type="vehicle.volkswagen.t2" owner="CARLA-FHWA-L" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA-SUMO-01" bsmid="f03ad628" type="vehicle.volkswagen.t2" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-                <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-L" roleName="FHWA-SUMO-01" generate_bsms="true"/>
+                <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-SUMO-01" generate_bsms="true"/>
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.301177" longitudeInDegrees="-83.698684" heightAboveEllipsoidInMeters="250"/>
@@ -138,9 +138,9 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="FHWA-SUMO-02" bsmid="f03ad629" type="vehicle.mercedes-benz.coupe" owner="CARLA-FHWA-L" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA-SUMO-02" bsmid="f03ad629" type="vehicle.mercedes-benz.coupe" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
         <userData>
-                <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-L" roleName="FHWA-SUMO-02" generate_bsms="true"/>
+                <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-SUMO-02" generate_bsms="true"/>
         </userData>
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="42.301152" longitudeInDegrees="-83.697944" heightAboveEllipsoidInMeters="250"/>

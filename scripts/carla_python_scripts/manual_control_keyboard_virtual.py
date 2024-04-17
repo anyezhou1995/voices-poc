@@ -178,7 +178,7 @@ class World(object):
         self._actor_filter = args.filter
         self._gamma = args.gamma
         
-        max_reset_attempts = 10
+        max_reset_attempts = 20
         reset_attempts = 0
         reset_wait_time = 5
 
