@@ -31,6 +31,8 @@ RUN rm /etc/apt/sources.list.d/cuda.list && \
     apt-get update && \
     # add vulkan-utils to fix crashing 
     apt install -y vulkan-utils && \
+    # install iproute2
+    apt install -y iproute2 && \
     # cleanup apt lists
     rm -rf /var/lib/apt/lists/*
 
