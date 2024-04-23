@@ -27,7 +27,7 @@ services:
 
   voices:
     container_name: voices
-    image: usdotfhwastoldev/voices:pilot2-event2-0.0.14
+    image: usdotfhwastoldev/voices:pilot2-event2-latest
     tty: true 
     depends_on:
       - carla-voices

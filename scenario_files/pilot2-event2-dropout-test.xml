@@ -1,0 +1,173 @@
+<?xml version="1.0.0" encoding="UTF-8"?>
+<scenario>
+  <identifier>
+    <name>Pilot 2 Event 2</name>
+  </identifier>
+  <OpenDrive>
+    <MapFileName name="mcity_map_v2.xodr">
+      <MapOrigin latitudeInDegrees="42.30059341574939" longitudeInDegrees="-83.69928318881136" heightAboveEllipsoidInMeters="0"> </MapOrigin>
+    </MapFileName>
+  </OpenDrive>
+
+
+
+  <vehicles>
+
+    <vehicle name="carma_1" bsmid="f03ad619" type="vehicle.toyota.prius" owner="CARLA-FHWA-2" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-2" roleName="carma_1"/>
+            <!-- <CARLA manual="true" generate_bsms="false"></CARLA> -->
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.30264841495023" longitudeInDegrees="-83.69746440306264" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=149.74896240234375 y=-228.76519775390625 yaw=188.8 -->
+            <Heading>278.8</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="carma_2" bsmid="f03ad626" type="vehicle.toyota.prius" owner="CARLA-FHWA-1" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-1" roleName="carma_2" generate_bsms="true"/>
+            <!-- <CARLA manual="true" generate_bsms="true"></CARLA> -->
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.30245402283134" longitudeInDegrees="-83.69784540965374" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=118.37894439697266 y=-207.12489318847656 yaw=103.40 -->
+            <Heading>193.40</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="ANL-DYNO-1" bsmid="f03ad623" type="vehicle.toyota.prius" owner="CARLA-ANL-2" material="Aluminum" lvcIndicator="Live">
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.3025391192385" longitudeInDegrees="-83.69779345760013" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=122.6563949584961 y=-216.5980682373047 yaw=124.6 -->
+            <Heading>214.6</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="ORNL-AUTO-1" bsmid="f03ad627" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Live">
+        <userData>
+             <CARMA CARLAcosimulationIdentifier="CARLA-ORNL-1" roleName="ORNL-AUTO-1" generate_bsms="true"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.302606970366554" longitudeInDegrees="-83.69770537139738" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=129.908935546875 y=-224.15145874023438 yaw=143.06 -->
+            <Heading>233.06</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="MCITY-TERASIM-01" bsmid="f03ad622" type="vehicle.toyota.prius" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-TERASIM-01" generate_bsms="true"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.300766" longitudeInDegrees="-83.699090" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=15.871896 y=-19.251431 yaw=277.4 -->
+            <Heading>7.4</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="MCITY-TERASIM-02" bsmid="f03ad620" type="vehicle.toyota.prius" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-TERASIM-02" generate_bsms="true"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.300373" longitudeInDegrees="-83.698457" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=68.050499 y=24.545536 yaw=2.04 -->
+            <Heading>92.04</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="MCITY-CAV-01" bsmid="f03ad620" type="vehicle.lincoln.mkz2017" owner="CARLA-MCITY-2" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARMA CARLAcosimulationIdentifier="CARLA-MCITY-2" roleName="MCITY-CAV-01" generate_bsms="true"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.30264755101339" longitudeInDegrees="-83.69759054951403" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=139.3627471923828 y=-228.6690216064453 yaw=166.89 -->
+            <Heading>256.89</Heading>
+        </initialTSPI>
+    </vehicle>
+
+  </vehicles>
+
+  <intersectionSignalControllers>
+    <intersectionSignalController name="tsc_mcity_state_and_liberty" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="ctrl549" id="549"/>
+          </controllers>
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+  </intersectionSignalControllers>
+  <phaseSignalMappings>
+        <configuration name="MCity Wolverine and Liberty Configuration - Replay" intersectionName="tsc_mcity_state_and_liberty">
+      <controller name="ctrl549-502A" id="549">
+        <control signalId="658" type="">
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="ctrl549-497A" id="549">
+        <control signalId="663" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="ctrl549-504A" id="549">
+        <control signalId="656" type="">
+          <userData><phase>6</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+  </phaseSignalMappings>
+
+  <simulations>
+
+    <simulation name="CARLA-FHWA-3" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+    
+    <simulation name="CARLA-UCLA-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ECO-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-VW-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-VW-2" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ANL-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ANL-2" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-MCITY-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-TTS-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-MITRE-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ORNL-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+  </simulations>
+
+</scenario>
