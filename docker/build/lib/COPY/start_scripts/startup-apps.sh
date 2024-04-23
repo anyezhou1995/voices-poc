@@ -41,7 +41,7 @@ if [[ $VUG_DOCKER_START_CARLA == true ]]; then
    sleep 5s
    
    if [[ $VUG_CARLA_BLANK_SIGNALS == true ]]; then
-      # blank signals
+      # blank signals and essentially disable their timing so that the only TL states we see are from TENA TrafficLight SDO updates
       python3 $HOME/voices-poc/scripts/carla_python_scripts/blank_traffic_signals.py --host $VUG_CARLA_ADDRESS & 
    fi
 
@@ -51,9 +51,14 @@ if [[ $VUG_DOCKER_START_CARLA == true ]]; then
    fi
   
 
-   if [[ $VUG_DISPLAY_VEHICLE_ROLENAMES == true ]]; then
-      # display vehicle names
-      python3 $HOME/voices-poc/scripts/carla_python_scripts/display_vehicle_rolenames.py --host $VUG_CARLA_ADDRESS -d 0 &
+   if [[ $VUG_DISPLAY_VEHICLE_ROLENAMES == true ]] || [[ $VUG_DISPLAY_TRAFFIC_SIGNAL_STATES == true ]]; then
+      # display vehicle names and/or traffic light info
+      python3 $HOME/voices-poc/scripts/carla_python_scripts/display_carla_info.py --host $VUG_CARLA_ADDRESS -d 0 &
+   fi
+
+   if [[ $VUG_DISPLAY_SDSM == true ]]; then
+      # display SDSMs as they are received
+      python3 $HOME/voices-poc/scripts/carla_python_scripts/draw_sdsm_json_live.py --host $VUG_CARLA_ADDRESS &
    fi
 
    sleep 5s

@@ -108,7 +108,7 @@ def main():
         #     [262.5,-175.9,0],
 
         # ]
-        tsc_actors_to_set = [96,91,101]
+        tsc_actors_to_set = []
         carla_actors = world.get_actors().filter("traffic.traffic_light")
         print(f'Setting Signals: {carla_actors}')
         for actor in carla_actors:

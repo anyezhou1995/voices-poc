@@ -190,12 +190,12 @@ def draw_sdsm(sdsm_json):
         life_time=draw_lifetime,
         persistent_lines=True)
 
-    world.debug.draw_string(
-        carla.Location(x=vru_x-0.7, y=vru_y-0.2, z=draw_z_height), 
-        str("[VRU]"), 
-        draw_shadow=False,
-        color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
-        persistent_lines=True)
+    # world.debug.draw_string(
+    #     carla.Location(x=vru_x, y=vru_y, z=draw_z_height), 
+    #     str("[VRU]"), 
+    #     draw_shadow=False,
+    #     color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
+    #     persistent_lines=True)
 
 
 
@@ -231,9 +231,11 @@ try:
     #         draw_shadow=False,
     #         color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
     #         persistent_lines=True)
+    receive_ip = os.getenv("VUG_J3224_ADAPTER_SEND_ADDRESS")
+    receive_port = os.getenv("VUG_J3224_ADAPTER_SEND_PORT")
 
-    UDP_IP = "192.168.55.230"
-    UDP_PORT = 5399
+    UDP_IP = receive_ip
+    UDP_PORT = receive_port
 
     sock = socket.socket(   socket.AF_INET, # Internet
                             socket.SOCK_DGRAM) # UDP
@@ -249,13 +251,7 @@ try:
             decoded_sdsm = SDSMDecoder.sdsm_decoder(hex_data)
             print("Decoded SDSM: " + str(decoded_sdsm))
             draw_sdsm(decoded_sdsm)
-
-
-
-
         
-    ################################################################################################
-    # Once you see all index number, you can manually change its states and timimg.
-    # Your signal control scripts.
+
 finally:
     print('\nDone!')

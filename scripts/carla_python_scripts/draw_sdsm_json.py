@@ -256,7 +256,7 @@ try:
                 
                 local_vru_ref_pos_calc = { 
                     "x": (vru_ref_pos["x"] - mcity_origin["x"] + x_fudge), 
-                    "y": -1*(vru_ref_pos["y"] - mcity_origin["y"] + y_fudge), 
+                    "y": (vru_ref_pos["y"] - mcity_origin["y"] + y_fudge), 
                     "z": (vru_ref_pos["z"] - mcity_origin["z"])
                 }
 
@@ -296,12 +296,12 @@ try:
                 # print("\tlocal_vru_ref_pos: " + str(local_vru_ref_pos))
                 # print("\tvru_x: " + str(vru_x))
                 # print("\tvru_y: " + str(vru_y))
-                # world.debug.draw_string(
-                #     carla.Location(x=vru_x, y=vru_y, z=draw_z_height), 
-                #     str(crossing["crossing"]), 
-                #     draw_shadow=False,
-                #     color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
-                #     persistent_lines=True)
+                world.debug.draw_string(
+                    carla.Location(x=vru_x, y=vru_y, z=draw_z_height), 
+                    str(crossing["crossing"]), 
+                    draw_shadow=False,
+                    color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
+                    persistent_lines=True)
 
 
         
