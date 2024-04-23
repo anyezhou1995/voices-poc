@@ -1117,7 +1117,7 @@ def game_loop(args):
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-        UDP_IP = "10.7.108.81"
+        UDP_IP = "10.7.108.22"
         #UDP_IP = os.getenv("VUG_LOCAL_ADDRESS")  #### VPN testing to get SPaT
         UDP_PORT = 5398
 
