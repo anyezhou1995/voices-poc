@@ -80,6 +80,8 @@ RUN apt-get update && \
     iputils-ping nano tshark git tcpdump \
     # install sumo tools
     sumo=1.19.0-1~focal sumo-tools=1.19.0-1~focal sumo-doc=1.19.0-1~focal \
+    # install iproute2
+    iproute2 \
     # install dumb init to enable gracefully stopping container processes
     dumb-init \
     # cleanup apt lists
