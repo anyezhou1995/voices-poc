@@ -107,7 +107,7 @@ done
 
 echo "----- STARTING VEHICLE E-BRAKE SCRIPT -----"
 
-$VUG_LOCAL_VOICES_POC_PATH/docker/other_scripts/stop_all_vehicles.sh &> stop_vehicle_log.txt &
+$VUG_LOCAL_VOICES_POC_PATH/docker/other_scripts/stop_all_vehicles.sh &> /dev/null &
 
 echo "----- STARTING CARMA PLATFORM -----"
 

@@ -114,15 +114,6 @@ def main():
 
     finally:
 
-        if args.sync and synchronous_master:
-            settings = world.get_settings()
-            settings.synchronous_mode = False
-            settings.fixed_delta_seconds = None
-            world.apply_settings(settings)
-
-        print('\nENDING')
-
-
         time.sleep(0.5)
 
 if __name__ == '__main__':
@@ -132,4 +123,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     finally:
-        print('\ndone.')
+        print('\nDONE CONVERTING LAT TO XYZ')

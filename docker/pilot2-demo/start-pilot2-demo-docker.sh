@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker_compose_file='pilot2-event2_no-carla_docker-compose.yml'
+docker_compose_file='pilot2-demo_docker-compose.yml'
 
 stopDocker()
 {
@@ -73,13 +73,13 @@ docker_compose_v2_version=$(docker compose version 2> /dev/null)
 if [ ! -z "$docker_compose_v2_version" ]; then
     echo
     echo "docker compose version: "$docker_compose_v2_version
-    
+
     docker_compose_cmd="docker compose"
 else
     docker_compose_v1_version=$(docker-compose -v 2> /dev/null)
 
     if [ ! -z "$docker_compose_v1_version" ]; then
-        
+
         echo
         echo "docker-compose version: "$docker_compose_v1_version
 
@@ -89,7 +89,7 @@ else
         echo ERROR: No valid docker compose version found
         exit
     fi
-    
+
 fi
 
 final_vpn_local_address=""
@@ -149,14 +149,14 @@ if [[ ! -z $vpn_check ]]; then
 
     vpn_local_ip=$(ip -br a show $vpn_check | awk '{print $3}')
     vpn_local_ip_clean=${vpn_local_ip%/*}
-    
+
     if [[ "$vpn_local_ip_clean" =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]]; then
         echo "    IP $vpn_local_ip_clean is a valid IP"
     else
         echo
         echo "Unable to automatically get VPN local address"
         read -p "Please enter your local IP address for the VPN (found under the tun interface using the command: 'ip -br a show' ) [###.###.###.###]: " manual_vpn_local_ip
-        
+
         if [[ "$manual_vpn_local_ip" =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]]; then
             echo "    IP $manual_vpn_local_ip is a valid IP"
             vpn_local_ip_clean=$manual_vpn_local_ip
@@ -164,9 +164,9 @@ if [[ ! -z $vpn_check ]]; then
             echo
             echo "    IP $manual_vpn_local_ip is NOT valid, please set VUG_LOCAL_ADDRESS manually in your site config"
             vpn_local_ip_clean=""
-        fi        
+        fi
     fi
-    
+
 
     em_fqdn_address=$(getent hosts em.voices-network.local | awk '{print $1}')
 
@@ -177,7 +177,7 @@ if [[ ! -z $vpn_check ]]; then
         echo
         echo "Unable to automatically get EM address"
         read -p "Please enter the VPN EM Address (found in the VOICES Portal under Connection Information) [###.###.###.###]: " manual_vpn_em_address
-        
+
         if [[ "$manual_vpn_em_address" =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]]; then
             echo "    IP $manual_vpn_em_address is a valid IP"
             em_fqdn_address=$manual_vpn_em_address
@@ -185,7 +185,7 @@ if [[ ! -z $vpn_check ]]; then
             echo
             echo "    IP $manual_vpn_em_address is NOT valid, please set VUG_LOCAL_ADDRESS manually in your site config"
             em_fqdn_address=""
-        fi        
+        fi
     fi
 fi
 

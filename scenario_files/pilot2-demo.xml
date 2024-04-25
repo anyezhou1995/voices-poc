@@ -89,6 +89,28 @@
         </initialTSPI>
     </vehicle>
 
+    <vehicle name="VW-MAN-1" bsmid="f03ad622" type="vehicle.audi.a2" owner="CARLA-VW-1" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARLA manual="true" generate_bsms="true"></CARLA>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.299832" longitudeInDegrees="-83.698467" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=67.368866 y=85.656593 yaw=351 -->
+            <Heading>351</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="TTS-MAN-1" bsmid="f03ad625" type="vehicle.mini.cooperst" owner="CARLA-TTS-1" material="Aluminum" lvcIndicator="Live">
+        <userData>
+            <CARLA manual="true" generate_bsms="true"></CARLA>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="42.300670" longitudeInDegrees="-83.697974" heightAboveEllipsoidInMeters="250"/>
+            <!-- x=107.847633 y=-9.522910 yaw=182 -->
+            <Heading>182</Heading>
+        </initialTSPI>
+    </vehicle>
+
   </vehicles>
 
   <intersectionSignalControllers>

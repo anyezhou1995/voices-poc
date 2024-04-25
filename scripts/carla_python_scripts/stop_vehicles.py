@@ -110,7 +110,6 @@ def main():
             time.sleep(1)
 
     finally:
-        print('\nENDING')
 
         time.sleep(0.5)
 
@@ -121,4 +120,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     finally:
-        print('\ndone.')
+        print('\nDONE STOPPING VEHICLES')

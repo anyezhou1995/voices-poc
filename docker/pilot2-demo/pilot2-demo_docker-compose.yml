@@ -1,0 +1,59 @@
+services:
+  carla-voices:
+    container_name: carla-voices
+    image: usdotfhwastoldev/carla-voices:pilot2-event2-latest
+    privileged: true
+    network_mode: "host"
+    environment:
+      - DISPLAY=$DISPLAY
+      - SDL_VIDEODRIVER=x11
+      - XAUTHORITY=~/.Xauthority
+      - VUG_CONTAINER_IMAGE=carla-voices
+      - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
+      - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
+      - VUG_VPN_LOCAL_ADDRESS=${VUG_VPN_LOCAL_ADDRESS}
+      - VUG_VPN_EM_ADDRESS=${VUG_VPN_EM_ADDRESS}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${VUG_LOCAL_VOICES_POC_PATH}:/home/carla/voices-poc
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  voices:
+    container_name: voices
+    image: usdotfhwastoldev/voices:pilot2-event2-latest
+    tty: true 
+    depends_on:
+      - carla-voices
+    network_mode: "host"
+    ipc: "host"
+    environment:
+      - DISPLAY=$DISPLAY
+      - SDL_VIDEODRIVER=x11
+      - XAUTHORITY=~/.Xauthority
+      - VUG_CONTAINER_IMAGE=voices
+      - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
+      - VUG_SCENARIO_CONFIG_FILE=${VUG_SCENARIO_CONFIG_FILE}
+      - VUG_VPN_LOCAL_ADDRESS=${VUG_VPN_LOCAL_ADDRESS}
+      - VUG_VPN_EM_ADDRESS=${VUG_VPN_EM_ADDRESS}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ${VUG_LOCAL_VOICES_POC_PATH}:/home/voices-poc
+      - ${VUG_LOCAL_TENADEV_DIR}:/home/tenadev
+      - /dev/bus/usb:/dev/bus/usb
+    devices:
+      - /dev/input:/dev/input
+    stop_grace_period: 30s
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -116,9 +116,6 @@ def main():
 
     finally:
 
-        print('\nENDING')
-
-
         time.sleep(0.5)
 
 if __name__ == '__main__':
@@ -128,4 +125,4 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         pass
     finally:
-        print('\ndone.')
+        print('\nDONE DESTROYING VEHICLES')

@@ -95,6 +95,14 @@ try:
 
             for index, vehicle in enumerate(vehicle_list, start=1):
 
+                cleaned_veh_name = str(vehicle.attributes["role_name"].replace("-MAN-","-").replace("TFHRC","FHWA"))
+
+                # TEMP, SWAP TERASIM 1 AND 2
+                if cleaned_veh_name == "MCITY-TERASIM-01":
+                    cleaned_veh_name = "MCITY-TERASIM-02"
+                elif cleaned_veh_name == "MCITY-TERASIM-02":
+                    cleaned_veh_name = "MCITY-TERASIM-01"
+
                 if args.verbose:
                     print("    " + str(vehicle.attributes))
                 if map_string in map_height_dict:
@@ -107,14 +115,14 @@ try:
 
                     world.debug.draw_string(
                         vehicle.get_location() + carla.Location(x=0, y=0, z=2),
-                        str(vehicle.attributes["role_name"].replace("-MAN-","-")).replace("TFHRC","FHWA"),
+                        cleaned_veh_name,
                         draw_shadow=False,color=color,
                         life_time=label_duration,
                         persistent_lines=True)
                 else:
                     world.debug.draw_string(
                         vehicle.get_location() + carla.Location(x=0, y=0, z=2),
-                        str(vehicle.attributes["role_name"].replace("-MAN-","-")).replace("TFHRC","FHWA"),
+                        cleaned_veh_name,
                         draw_shadow=False,color=carla.Color(r=255,g=0,b=0),
                         life_time=label_duration,
                         persistent_lines=True)

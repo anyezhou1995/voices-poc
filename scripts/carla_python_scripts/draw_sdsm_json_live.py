@@ -232,7 +232,7 @@ try:
     #         color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
     #         persistent_lines=True)
     receive_ip = os.getenv("VUG_J3224_ADAPTER_SEND_ADDRESS")
-    receive_port = os.getenv("VUG_J3224_ADAPTER_SEND_PORT")
+    receive_port = int(os.getenv("VUG_J3224_ADAPTER_SEND_PORT"))
 
     UDP_IP = receive_ip
     UDP_PORT = receive_port

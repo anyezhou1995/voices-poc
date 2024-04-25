@@ -13,18 +13,6 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
     fi
 fi
 
-while true; do
-    echo "Your current configs are:"
-    echo "      $site_link_base_name"
-    echo "      $scenario_link_base_name"
-    read -p "Would you like to continue? [Y/n] " yn
-    case $yn in
-        [Yy]* | "") break;;
-        [Nn]*) exit 1;;
-        * );;
-    esac
-done
-
 # Check if openvpn3 is installed
 if ! command -v openvpn3 &> /dev/null
 then

@@ -11,12 +11,6 @@ $docker_compose_cmd -f $docker_compose_file down
 source $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/stop_current_vpn_connection.sh
 }
 
-# Conduct VPN connectivity checks
-if ! $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/prune_vpn_connections.sh; then
-    exit 1
-fi
-
-
 voices_site_config=$HOME/.voices_site_config
 voices_scenario_config=$HOME/.voices_scenario_config
 
@@ -32,6 +26,20 @@ if [ -L ${voices_site_config} ] && [ -L ${voices_scenario_config} ]; then
         source $voices_scenario_config
         export VUG_SITE_CONFIG_FILE=$site_link_base_name
         export VUG_SCENARIO_CONFIG_FILE=$scenario_link_base_name
+
+        while true; do
+			echo "Your current configs are:"
+			echo "      Site Config: $site_link_base_name"
+			echo "      Scenario Config:$scenario_link_base_name"
+			echo
+			read -p "Would you like to continue? [Y/n] " yn
+			case $yn in
+				[Yy]* | "") break;;
+				[Nn]*) exit 1;;
+				* );;
+			esac
+		done
+        
     else
         echo
         echo "[!!!] .voices_site_config or .voices_scenario_config link is broken"
@@ -50,6 +58,11 @@ else
     echo "[!!!] .voices_site_config or .voices_scenario_config symbolic link does not exist"
     echo "Site Config: "$(readlink -f $voices_site_config)
     echo "Scenario Config: "$(readlink -f $voices_scenario_config)
+    exit 1
+fi
+
+# Conduct VPN connectivity checks
+if ! $VUG_LOCAL_VOICES_POC_PATH/scripts/utils/prune_vpn_connections.sh; then
     exit 1
 fi
 

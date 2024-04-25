@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker_compose_file='pilot2-event2_no-carla_docker-compose.yml'
+docker_compose_file='pilot2-demo_no-carla_docker-compose.yml'
 
 stopDocker()
 {
