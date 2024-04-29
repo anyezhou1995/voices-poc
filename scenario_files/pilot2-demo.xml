@@ -94,7 +94,7 @@
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.299487" longitudeInDegrees="-83.698921" heightAboveEllipsoidInMeters="233.5"/>
+            <GeodeticPosition latitudeInDegrees="42.299487" longitudeInDegrees="-83.698921" heightAboveEllipsoidInMeters="250"/>
             <!-- Transform(Location(x=29.813070, y=123.121147, z=233.263428), Rotation(pitch=3.766234, yaw=-51.854321, roll=0.142963)) -->
             <Heading>41</Heading>
         </initialTSPI>
@@ -105,7 +105,7 @@
             <CARLA manual="true" generate_bsms="true"></CARLA>
         </userData>
         <initialTSPI>
-            <GeodeticPosition latitudeInDegrees="42.300917" longitudeInDegrees="-83.699021" heightAboveEllipsoidInMeters="237.1"/>
+            <GeodeticPosition latitudeInDegrees="42.300917" longitudeInDegrees="-83.699021" heightAboveEllipsoidInMeters="250"/>
             <!-- Transform(Location(x=21.616829, y=-36.021389, z=236.903549), Rotation(pitch=1.190359, yaw=1.410181, roll=1.428874)) -->
             <Heading>90</Heading>
         </initialTSPI>

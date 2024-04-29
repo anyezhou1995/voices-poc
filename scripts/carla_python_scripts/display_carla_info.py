@@ -79,13 +79,15 @@ def display_vehicle_rolenames():
 
         for index, vehicle in enumerate(vehicle_list, start=1):
 
-            cleaned_veh_name = str(vehicle.attributes["role_name"].replace("-MAN-","-").replace("TFHRC","FHWA"))
-
+            cleaned_veh_name = str(vehicle.attributes["role_name"].replace("-MAN-","-").replace("TFHRC","FHWA").replace("carma_1","FHWA"))
+            
             # TEMP, SWAP TERASIM 1 AND 2
             if cleaned_veh_name == "MCITY-TERASIM-01":
                 cleaned_veh_name = "MCITY-TERASIM-02"
             elif cleaned_veh_name == "MCITY-TERASIM-02":
                 cleaned_veh_name = "MCITY-TERASIM-01"
+            else:
+                cleaned_veh_name = cleaned_veh_name.split('-', 1)[0]
 
             if args.verbose:
                 print("    " + str(vehicle.attributes))
