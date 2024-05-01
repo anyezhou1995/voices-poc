@@ -1144,6 +1144,7 @@ def game_loop(args):
         traffic_light_list = world.world.get_actors().filter('traffic.*')
         #print(f'Found {len(traffic_light_list)} Traffic Lights')
 
+        '''
         for index, light in enumerate(traffic_light_list, start=1):
             print(f'{light.id}')
             world.world.debug.draw_string(
@@ -1152,12 +1153,14 @@ def game_loop(args):
                 draw_shadow=False,
                 color=carla.Color(r=255, g=0, b=0), life_time=200,
                 persistent_lines=True)
-
+        '''
+        
         clock = pygame.time.Clock()
 
         ref_rotation = world.player.get_transform().rotation
         speed2go, ref_trans = 0, carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
         run_step = 0
+        get_anl = False
 
         while True:
             clock.tick_busy_loop(60)
@@ -1213,13 +1216,29 @@ def game_loop(args):
                         ref_trans1 = actor.get_transform()
                         x, y = ref_trans1.location.x, ref_trans1.location.y
                         ref_rotation = actor.get_transform().rotation
+                        get_anl = True
+                        print("Follow ANL!!!!!!!!!!")
                         #print(actor.attributes)
                         #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                         break
+                    get_anl = False
 
-                if BSM_flag is True:
+                if not get_anl:
+                    for actor in actor_list:
+                        if actor.attributes['role_name'] == 'UCLA-OPENCDA':
+                            # Use actual name
+                            ref_trans1 = actor.get_transform()
+                            x, y = ref_trans1.location.x, ref_trans1.location.y
+                            ref_rotation = actor.get_transform().rotation
+                            speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
+                            speed_cache = speed
+                            get_anl = False
+                            print('UCAL speed (m/s) from carla: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
+                            break
+
+                #if BSM_flag is True:
                     #print('############ Carla map difference: ', x-x1, y-y1, '############')
-                    pass
+                    #pass
 
                 '''
                 if not BSM_flag:

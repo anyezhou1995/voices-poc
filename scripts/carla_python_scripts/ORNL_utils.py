@@ -445,8 +445,8 @@ def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, refere
                         SpatData['t1e'], SpatData['t2s'],
                         SpatData['t2e'], SpatData['r1s']]
         
-        with open('./data4Debug_2.txt', 'a') as t:
-            t.write(json.dumps(data_toSave) + '\n')
+        #with open('./data4Debug_2.txt', 'a') as t:
+            #t.write(json.dumps(data_toSave) + '\n')
         try:
             queue_length, instant_desired_speed, mode, a_out = gen_desired_spd(example_coasting_profile, A, B, C, M,
                                                                                orginal_desire_spd, next_movement, cav_spd, cav_acc,
