@@ -1,5 +1,5 @@
 #
-# BUILD COMMAND: VERSION=0.0.1 && source build-assets.env && sudo DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$VERSION --build-context assets="$BUILD_DIR" -t harbor.saxtonlab.duckdns.org/distributed-testing/dt-base:$VERSION . --progress=plain -f dt-base_Dockerfile
+# BUILD COMMAND: VERSION=0.0.1 && source build-assets.env && sudo DOCKER_BUILDKIT=1 docker build --build-arg VERSION=$VERSION --build-context assets="$BUILD_DIR" -t harbor.distributedtesting.org/distributed-testing/dt-base:$VERSION . --progress=plain -f dt-base_Dockerfile
 #
 
 # ----------------------- BUILD STAGE ----------------------- #

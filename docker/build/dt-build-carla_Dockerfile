@@ -1,9 +1,9 @@
 #
-# BUILD COMMAND: VERSION=0.0.2 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-carla:$VERSION . --progress=plain -f dt-build-carla_Dockerfile
-# VERSION=0.0.2 && docker tag harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-carla:$VERSION harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-carla:latest
+# BUILD COMMAND: VERSION=0.0.2 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t harbor.distributedtesting.org/distributed-testing/dt-build-carla:$VERSION . --progress=plain -f dt-build-carla_Dockerfile
+# VERSION=0.0.2 && docker tag harbor.distributedtesting.org/distributed-testing/dt-build-carla:$VERSION harbor.distributedtesting.org/distributed-testing/dt-build-carla:latest
 #
 
-FROM harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-general:latest
+FROM harbor.distributedtesting.org/distributed-testing/dt-build-general:latest
 
 ARG DEBIAN_FRONTEND="noninteractive" 
 ARG TZ="America/New_York"

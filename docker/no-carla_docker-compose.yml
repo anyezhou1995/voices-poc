@@ -1,7 +1,7 @@
 services:
   dt-core:
     container_name: dt-core
-    image: harbor.saxtonlab.duckdns.org/distributed-testing/dt-core:latest
+    image: harbor.distributedtesting.org/distributed-testing/dt-core:latest
     tty: true
     ipc: "host"
     network_mode: "host"

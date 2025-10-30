@@ -1,12 +1,12 @@
-FROM harbor.saxtonlab.duckdns.org/distributed-testing/dt-base:dev-latest
+FROM harbor.distributedtesting.org/distributed-testing/dt-base:dev-latest
 
 # Make sure that the docker container gets enough memory or the compiler will crash building the CppClient
 # On macos I increased the memory available from 2.0GB to 6.0GB.  I didn't try lower than this yet.
 # The settings are for the VM that runs the containers and can be accessed through the Docker UI settings.
 # Click on the gear icon (Setting) | Resoures then increase the memory.
 
-# VERSION=0.0.2 && sudo docker build --secret id=usdotfhwastol_token,src=usdotfhwastol_token --build-arg VERSION=$VERSION -t harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-general:$VERSION . --progress=plain -f dt-build-general_Dockerfile
-# VERSION=0.0.2 && docker tag harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-general:$VERSION harbor.saxtonlab.duckdns.org/distributed-testing/dt-build-general:latest
+# VERSION=0.0.2 && sudo docker build --secret id=usdotfhwastol_token,src=usdotfhwastol_token --build-arg VERSION=$VERSION -t harbor.distributedtesting.org/distributed-testing/dt-build-general:$VERSION . --progress=plain -f dt-build-general_Dockerfile
+# VERSION=0.0.2 && docker tag harbor.distributedtesting.org/distributed-testing/dt-build-general:$VERSION harbor.distributedtesting.org/distributed-testing/dt-build-general:latest
 
 ARG DEBIAN_FRONTEND="noninteractive" 
 ARG TZ="America/New_York"

@@ -1,9 +1,9 @@
 #
-# BUILD COMMAND: VERSION=0.0.1 && source build-assets.env && DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION --build-context assets="$BUILD_DIR" -t harbor.saxtonlab.duckdns.org/distributed-testing/dt-core:$VERSION . --progress=plain -f dt-core_Dockerfile
+# BUILD COMMAND: VERSION=0.0.1 && source build-assets.env && DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION --build-context assets="$BUILD_DIR" -t harbor.distributedtesting.org/distributed-testing/dt-core:$VERSION . --progress=plain -f dt-core_Dockerfile
 #
 
 # ----------------------- BUILD STAGE ----------------------- #
-FROM harbor.saxtonlab.duckdns.org/distributed-testing/dt-base:dev-latest AS build
+FROM harbor.distributedtesting.org/distributed-testing/dt-base:dev-latest AS build
 
 SHELL ["/bin/bash", "-ec"]
 
@@ -73,7 +73,7 @@ RUN --mount=type=bind,from=assets,source=.,target=/mnt/build,readonly \
     mv CARLA_0.9.15 $HOME/CARLA
 
 # ----------------------- RUNTIME STAGE ----------------------- #
-FROM harbor.saxtonlab.duckdns.org/distributed-testing/dt-base:dev-latest
+FROM harbor.distributedtesting.org/distributed-testing/dt-base:dev-latest
 
 ARG VERSION=dev
 LABEL version=${VERSION}

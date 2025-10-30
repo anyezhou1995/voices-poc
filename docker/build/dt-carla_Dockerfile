@@ -1,5 +1,5 @@
 #
-# BUILD COMMAND: VERSION=0.0.1 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t harbor.saxtonlab.duckdns.org/distributed-testing/dt-carla:$VERSION . --progress=plain -f dt-carla_Dockerfile
+# BUILD COMMAND: VERSION=0.0.1 && sudo DOCKER_BUILDKIT=1 docker build --build-arg version=$VERSION -t harbor.distributedtesting.org/distributed-testing/dt-carla:$VERSION . --progress=plain -f dt-carla_Dockerfile
 #
 
 FROM carlasim/carla:0.9.10
