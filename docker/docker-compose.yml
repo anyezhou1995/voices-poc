@@ -4,9 +4,13 @@ services:
     image: harbor.distributedtesting.org/distributed-testing/dt-carla:latest
     privileged: true
     network_mode: "host"
+    #gpus: all
+    group_add:
+      - "1002"
     environment:
       - DISPLAY=$DISPLAY
       - SDL_VIDEODRIVER=x11
+      - VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
       - XAUTHORITY=~/.Xauthority
       - VUG_CONTAINER_IMAGE=dt-carla
       - VUG_SITE_CONFIG_FILE=${VUG_SITE_CONFIG_FILE}
@@ -16,6 +20,14 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ${VUG_LOCAL_DT_PATH}:/home/carla/distributed-testing
+      - /usr/share/vulkan:/usr/share/vulkan:ro
+      - /usr/share/vulkan/icd.d:/usr/share/vulkan/icd.d:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.82.09:/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.82.09:ro
+    devices:
+      - /dev/nvidia0:/dev/nvidia0
+      - /dev/nvidiactl:/dev/nvidiactl
+      - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/nvidia-modeset:/dev/nvidia-modeset
     stop_grace_period: 30s
     deploy:
       resources:
