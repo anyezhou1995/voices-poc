@@ -1073,22 +1073,25 @@ from configparser import ConfigParser
 import json
 #import matplotlib.pyplot as plt
 
+# Routing use
 from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
+# Speed planner and low-level throttle/brake steering controller
 from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_lookBack
 from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
 ## TODO: Create a dummy car, record our own data.
 
+# Set the origin for Mcity map as a reference
 mcity_origin = { 
                 "x": 518508.658, 
                 "y": -4696054.02, 
                 "z": 0
             }
 
-# Gotta 
+# Hardcoded intersection stop bar 
 barPos_x, barPos_y = 53.33, -23.77
 
 update_gap = 1
@@ -1115,25 +1118,29 @@ def game_loop(args):
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
+        # Set the UDP specs
         UDP_IP = "10.7.108.81"
         UDP_PORT = 5398
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((UDP_IP, UDP_PORT))
 
+        # Set up the world client and vehicle low-level controller
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
+        # Setup specs for eco-driving planner
         RefSpd, ref_cache = 0, 0
         speed, speed_cache = 0, 0
         cache_time = 0
 
         wp_id_cache, wp_id = 0, 0
 
-        df_waypoints = pd.read_csv('./ORNL_waypoints.csv')
+        df_waypoints = pd.read_csv('./ORNL_waypoints.csv') # Get record waypoints
         cx, cy, cz = df_waypoints['x'].to_numpy(), df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
 
+        # Set a SPaT data to continue run the car
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
 
@@ -1148,9 +1155,10 @@ def game_loop(args):
         while True:
             clock.tick_busy_loop(60)
 
+            ## first receive to get SPat
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
             hex_data = data.hex()
-            # Loop: a sub-process for info? another node to make sure data coming in
+            ### TODO Loop: a sub-process for info? another node to make sure data coming in
 
             reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
             SPaT_flag, spatInfo = process_SPaT(hex_data)
@@ -1168,6 +1176,7 @@ def game_loop(args):
                     print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
                     ref_trans = actor.get_transform()
             '''
+            ## second receive to get BSM
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
             hex_data = data.hex()
             BSM_flag, x1, y1, speed = process_BSM(hex_data)
@@ -1180,6 +1189,7 @@ def game_loop(args):
             #if BSM_flag is True:
                 #print('BSM: ', BSM_flag, x1, y1, speed)
             
+            ## Hardcoded UCLA vehicle as the leader
             for actor in actor_list:
                 #print(actor.id, actor.type_id)
                 #if actor.type_id == 'vehicle.toyota.prius':
@@ -1207,7 +1217,7 @@ def game_loop(args):
                         #print('UCLA: ', actor.id, x, y, speed)
 
             '''
-
+            ## Compute info for speed planning
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
@@ -1217,13 +1227,16 @@ def game_loop(args):
 
             print(dist2bar)
             
+            ## Too large spacing set to nan
             if spacing > 75 or np.isnan(speed):
                 speed = np.nan
                 spacing = np.nan
 
+            ## Pass intersection stop bar or not    
             if controller.eco_drive and pass_or_not == 0 and round(last_dist2bar,2) < round(dist2bar,2):
                 pass_or_not = 1
 
+            ## Record latest spat just in case
             if spatInfo != {}:
                 spatCache = spatInfo
                 #print(spatInfo)
@@ -1234,13 +1247,16 @@ def game_loop(args):
                 # RefSpd = speed*3.6/1.6
 
             try:
+                ## update reference speed every 0.2 secs
                 current_update_time = datetime.datetime.now().timestamp()
                 dt = current_update_time - cache_time
 
                 if dt >= 0.2:
+                    ##if approaching intersection, use eco-algo
                     if not pass_or_not:
                         RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
                         print('Can get before pass!')
+                    ##if passed intersection, use CF model
                     else:
                         print('Do CF', speed_ego, speed, spacing)
                         uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
@@ -1268,14 +1284,17 @@ def game_loop(args):
                 #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
             
             #print('########### wp id: ' + str(wp_id))
+            ## get the reference transformation
             ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
             
+            ## Compute the desired reference speed in km per hr
             speed2go = RefSpd*1.6
-            # collision consideration
+            ## collision consideration
             if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
                 #controller._control.brake = 0.99
                 speed2go = 0
 
+            ## Controller execution
             if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
                 return
 
