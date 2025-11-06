@@ -306,7 +306,7 @@ def spat_data_process(j2735_tena):
         print('')
         # print(decoded_msg_json)
     except Exception as err:
-        print(f"Unexpected {err=}, {type(err)=}")
+        print(f"Unexpected {err}, {type(err)}")
         raise
     return decoded_msg
 

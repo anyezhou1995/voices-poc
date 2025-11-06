@@ -66,6 +66,12 @@ carla_egg_file = find_carla_egg()
 
 sys.path.append(carla_egg_file)
 
+# Add the CARLA python scripts root so we can import local agent utilities
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CARLA_SCRIPTS_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, os.pardir))
+if CARLA_SCRIPTS_ROOT not in sys.path:
+    sys.path.append(CARLA_SCRIPTS_ROOT)
+
 
 # ==============================================================================
 # -- imports -------------------------------------------------------------------
@@ -157,6 +163,14 @@ def get_actor_display_name(actor, truncate=250):
 class World(object):
     def __init__(self, carla_world, hud, args):
         self.world = carla_world
+        self.spectator = self.world.get_spectator()
+        self._bev_height = 80.0
+        self._spectator_location = None
+        self._spectator_rotation = None
+        self._spectator_height = None
+        self._location_smoothing = 0.1
+        self._height_smoothing = 0.02
+        self._rotation_smoothing = 0.15
         self.actor_role_name = args.rolename
         try:
             self.map = self.world.get_map()
@@ -227,8 +241,8 @@ class World(object):
                     sys.exit(1)
                 spawn_points = self.map.get_spawn_points()
                 spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
-                spawn_point = carla.Transform(carla.Location(x=52.122, y=2.986, z=237.5), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
-                spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                #spawn_point = carla.Transform(carla.Location(x=52.122, y=2.986, z=237.5), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                #spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
 
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
@@ -241,6 +255,10 @@ class World(object):
         self.camera_manager.set_sensor(cam_index, notify=False)
         actor_type = get_actor_display_name(self.player)
         self.hud.notification(actor_type)
+        self._spectator_location = None
+        self._spectator_rotation = None
+        self._spectator_height = None
+        self._update_spectator()
 
         # settign up PID controller
         args_lateral = {'K_P': 1.95/2, 'K_D': 0.2/2, 'K_I': 0.075, 'dt': 0.08}
@@ -261,7 +279,53 @@ class World(object):
             self.radar_sensor.sensor.destroy()
             self.radar_sensor = None
 
+    def _update_spectator(self):
+        if self.player is None or self.spectator is None:
+            return
+
+        transform = self.player.get_transform()
+        target_rotation = carla.Rotation(pitch=-90.0, yaw=transform.rotation.yaw, roll=0.0)
+
+        height_target = transform.location.z + self._bev_height
+        if self._spectator_height is None:
+            self._spectator_height = height_target
+        else:
+            self._spectator_height += (height_target - self._spectator_height) * self._height_smoothing
+
+        target_location = carla.Location(
+            x=transform.location.x,
+            y=transform.location.y,
+            z=self._spectator_height)
+
+        if self._spectator_location is None:
+            self._spectator_location = carla.Location(
+                x=target_location.x,
+                y=target_location.y,
+                z=target_location.z)
+        else:
+            smoothing = self._location_smoothing
+            self._spectator_location.x += (target_location.x - self._spectator_location.x) * smoothing
+            self._spectator_location.y += (target_location.y - self._spectator_location.y) * smoothing
+            self._spectator_location.z = self._spectator_height
+
+        if self._spectator_rotation is None:
+            self._spectator_rotation = target_rotation
+        else:
+            alpha = self._rotation_smoothing
+            yaw = self._lerp_angle(self._spectator_rotation.yaw, target_rotation.yaw, alpha)
+            pitch = self._lerp_angle(self._spectator_rotation.pitch, target_rotation.pitch, alpha)
+            roll = self._lerp_angle(self._spectator_rotation.roll, target_rotation.roll, alpha)
+            self._spectator_rotation = carla.Rotation(pitch=pitch, yaw=yaw, roll=roll)
+
+        self.spectator.set_transform(carla.Transform(self._spectator_location, self._spectator_rotation))
+
+    @staticmethod
+    def _lerp_angle(current, target, alpha):
+        delta = (target - current + 180.0) % 360.0 - 180.0
+        return current + delta * alpha
+
     def tick(self, clock):
+        self._update_spectator()
         self.hud.tick(self, clock)
 
     def render(self, display):
@@ -1122,8 +1186,8 @@ def game_loop(args):
         UDP_IP = "10.7.108.81"
         UDP_PORT = 5398
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind((UDP_IP, UDP_PORT))
+        #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        #sock.bind((UDP_IP, UDP_PORT))
 
         # Set up the world client and vehicle low-level controller
         hud = HUD(args.width, args.height)
@@ -1133,7 +1197,10 @@ def game_loop(args):
         # Setup specs for eco-driving planner
         RefSpd, ref_cache = 0, 0
         speed, speed_cache = 0, 0
+        x, y = 0, 0
+        spatInfo = {}
         cache_time = 0
+        BSM_flag = False
 
         wp_id_cache, wp_id = 0, 0
 
@@ -1143,6 +1210,7 @@ def game_loop(args):
         # Set a SPaT data to continue run the car
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
+        reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
 
         ## Read saved waypoints
         #with open("wp_hist_0102", "r") as fp:
@@ -1156,12 +1224,12 @@ def game_loop(args):
             clock.tick_busy_loop(60)
 
             ## first receive to get SPat
+            '''
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
             hex_data = data.hex()
             ### TODO Loop: a sub-process for info? another node to make sure data coming in
-
-            reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
             SPaT_flag, spatInfo = process_SPaT(hex_data)
+            '''
 
             #ref_trans = world.player.get_transform()
             ref_rotation = world.player.get_transform().rotation
@@ -1177,9 +1245,11 @@ def game_loop(args):
                     ref_trans = actor.get_transform()
             '''
             ## second receive to get BSM
+            '''
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
             hex_data = data.hex()
             BSM_flag, x1, y1, speed = process_BSM(hex_data)
+            '''
 
             if BSM_flag is True:
                 speed_cache = speed
@@ -1310,7 +1380,7 @@ def game_loop(args):
                 last_dist2bar = dist2bar
 
             ego_speed_buffer.append(speed_ego)
-            Data4JH.append(dataToSave)
+            #Data4JH.append(dataToSave)
 
             #draw_box(world.world, x1, y1, 240)
 
