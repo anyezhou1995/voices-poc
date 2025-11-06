@@ -9,8 +9,8 @@ if [[ ! -z $VUG_VPN_EM_ADDRESS ]]; then
 fi
 
 # ADAPTER VERSION CONFIG
-export VUG_CARLA_ADAPTER_VERSION="CARLAtenaAdapter-2.2.0"
-export VUG_DEBUG_CARLA_ADAPTER_VERSION="debug-CARLAtenaAdapter-2.2.0"
+export VUG_CARLA_ADAPTER_VERSION="CARLAtenaAdapter-2.2.1"
+export VUG_DEBUG_CARLA_ADAPTER_VERSION="debug-CARLAtenaAdapter-2.2.1"
 export VUG_SCENARIO_PUBLISHER_VERSION="scenario-publisher-2.2.0"
 export VUG_ENTITY_GENERATOR_VERSION="tena-entity-generator-2.2.0"
 export VUG_V2X_ADAPTER_VERSION="TENAV2XMessageAdapter-2.2.0"

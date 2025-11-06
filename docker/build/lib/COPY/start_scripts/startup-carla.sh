@@ -52,9 +52,27 @@ fi
 
 
 /bin/bash $CARLA_LOCATION/CarlaUE4.sh $carla_graphics_api_arg $carla_graphics_quality_arg -nosound &
+CARLA_PID=$!
+
+# graceful shutdown handler
+cleanup() {
+  echo "Stopping CARLA gracefully..."
+  # send to the whole process group if CarlaUE4.sh spawns children
+  kill -INT "-$CARLA_PID" 2>/dev/null || kill -INT "$CARLA_PID" 2>/dev/null || true
+  sleep 3
+  kill -TERM "-$CARLA_PID" 2>/dev/null || kill -TERM "$CARLA_PID" 2>/dev/null || true
+
+  # wait up to 10 seconds, then SIGKILL as a last resort
+  end=$((SECONDS + ${GRACE_SECONDS:-10}))
+  while (( SECONDS < end )) && kill -0 "$CARLA_PID" 2>/dev/null; do sleep 1; done
+  kill -KILL "-$CARLA_PID" 2>/dev/null || kill -KILL "$CARLA_PID" 2>/dev/null || true
+  exit 0 # if we get here, we know we exited ugly, but we did it on purpose, so exit cleanly
+}
+
+trap cleanup TERM INT
 
 sleep 5s
-
 echo "VUG CARLA STARTUP COMLPETE"
 
-tail -f /dev/null
+# wait on CARLA
+wait "$CARLA_PID"

@@ -4,6 +4,7 @@ import re
 import argparse
 import json
 import math
+import time
 
 from find_carla_egg import find_carla_egg
 
@@ -119,6 +120,70 @@ def GeodeticToEcef( latitude, longitude,altitude):
 
         return { "x":x, "y": y, "z": z }
 
+def draw_world_axes(world,
+                    origin=carla.Location(0.0, 0.0, 0.0),
+                    length=10.0,
+                    thickness=0.2,
+                    arrow_size=0.8,
+                    life_time=0.0,
+                    persistent=False):
+    """
+    Draw arrows from 'origin' along +X, +Y, +Z in CARLA.
+    Axis colors: X=red, Y=green, Z=blue.
+    """
+    dbg = world.debug
+
+    end_x = carla.Location(origin.x + length, origin.y, origin.z)  # +X (North)
+    end_y = carla.Location(origin.x, origin.y + length, origin.z)  # +Y (East)
+    end_z = carla.Location(origin.x, origin.y, origin.z + length)  # +Z (Up)
+
+    # Signature: draw_arrow(begin, end, thickness, arrow_size, color, life_time=-1.0, persistent_lines=True)
+    dbg.draw_arrow(origin, end_x, thickness, arrow_size, carla.Color(255, 0, 0), float(life_time), persistent)  # X (red)
+    dbg.draw_arrow(origin, end_y, thickness, arrow_size, carla.Color(0, 255, 0), float(life_time), persistent)  # Y (green)
+    dbg.draw_arrow(origin, end_z, thickness, arrow_size, carla.Color(0, 0, 255), float(life_time), persistent)  # Z (blue)
+
+    # draw_string signature varies slightly by version; this form is widely compatible:
+    # draw_string(location, text, draw_shadow=False, color=Color(), life_time=-1.0, persistent_lines=True)
+    dbg.draw_string(end_x, " +X", False, carla.Color(255, 0, 0), float(life_time), persistent)
+    dbg.draw_string(end_y, " +Y", False, carla.Color(0, 255, 0), float(life_time), persistent)
+    dbg.draw_string(end_z, " +Z", False, carla.Color(0, 0, 255), float(life_time), persistent)
+
+def follow_vehicle_axes(world, role_name, length=5.0, life_time=0.5, offset_z=2.0):
+    """
+    Continuously draw X/Y/Z axes at the vehicle's position.
+    The draw frequency matches the life_time, so arrows refresh smoothly.
+
+    Args:
+        world: carla.World
+        role_name: vehicle's role_name attribute to track
+        length: arrow shaft length in meters
+        life_time: seconds each arrow stays visible (also the update rate)
+        offset_z: vertical offset above the vehicle roof
+    """
+    dbg = world.debug
+    actors = world.get_actors().filter('vehicle.*')
+    vehicle = next((a for a in actors if a.attributes.get('role_name') == role_name), None)
+    if vehicle is None:
+        print(f"Vehicle with role_name '{role_name}' not found.")
+        return
+
+    print(f"Tracking vehicle '{role_name}'... Press Ctrl+C to stop.")
+    try:
+        while True:
+            transform = vehicle.get_transform()
+            origin = transform.location + carla.Location(z=offset_z)
+
+            # use your existing draw_world_axes()
+            draw_world_axes(world,
+                            origin=origin,
+                            length=length,
+                            life_time=life_time,
+                            persistent=False)
+
+            time.sleep(life_time)
+    except KeyboardInterrupt:
+        print("\nStopped following vehicle axes.")
+
 try:
     client = carla.Client(args.host, args.port)
     client.set_timeout(5.0)
@@ -136,21 +201,8 @@ try:
                 "z": 0
             }
     
-    print("mcity_origin: " + str(mcity_origin))
-
-    world.debug.draw_string(
-            carla.Location(x=mcity_origin["x"], y=mcity_origin["y"], z=draw_z_height), 
-            "ORIGIN", 
-            draw_shadow=False,
-            color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
-            persistent_lines=True)
-    
-    world.debug.draw_string(
-            carla.Location(x=0, y=0, z=245), 
-            "[0,0,245]", 
-            draw_shadow=False,
-            color=carla.Color(r=255, g=0, b=0), life_time=draw_lifetime,
-            persistent_lines=True)
+    draw_world_axes(world, life_time=30)
+    follow_vehicle_axes(world, role_name="FHWA-JSON-3", length=8.0, life_time=0.1)
 
 finally:
     print('\nDone!')

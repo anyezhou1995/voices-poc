@@ -62,13 +62,17 @@ import json_templates
 # =================================
 # Global Configurations
 # =================================
-SELECTED_WAYPOINT_CSV = "Town04_waypoints.csv" # CSV file containing waypoint data
+LOCAL_ADDRESS = os.environ['VUG_LOCAL_ADDRESS']
+SELECTED_WAYPOINT_CSV = "delave_waypoints.csv" # CSV file containing waypoint data
 GET_OBJECT_TYPE = "waypoints"  # options are "waypoints" or "api"
 COORDINATE_FORMAT = "ltpENU" # options are "geocentric" or "ltpENU"
-PUBLISHER_IP = "127.0.0.1:8004" #IP for TENA Publisher connection
+PUBLISHER_IP = LOCAL_ADDRESS
+PUBLISHER_ENDPOINT = LOCAL_ADDRESS + ":8004" #IP for TENA Publisher connection
+STREAMER_IP = LOCAL_ADDRESS
+STREAMER_DATA_ENDPOINT = LOCAL_ADDRESS + ":8005"
 DATA_UPDATE_PERIOD = 0.1 # Period for retrieval of data (in seconds)
 INDIVIDUAL_TRANSMIT_DELAY = 0.002 # Period between transmission of individual entities to the REST API
-LOGGING_LEVEL = logging.INFO # sets the minimum level to log [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+LOGGING_LEVEL = logging.DEBUG # sets the minimum level to log [DEBUG, INFO, WARNING, ERROR, CRITICAL]
 
 ENTITY_ID = "03:05" # Unique identifier used to determine entityID of the object JSON
 VEHICLE_LIST = {    # List of vehicles you will be providing updates for
@@ -155,13 +159,13 @@ def waypoint(waypoint_list):
                 # These should not change as they match the expected keys for the json_templates
                 # The right side is the corresponding column name in your specified waypoint CSV file
                 # These fields will need to be updated based on your waypoint file
-                'total_distance_traveled': float(row['total_distance']),
-                'x': float(row['xMeters']),
-                'y': float(row['yMeters']),
-                'z': float(row['zMeters']),
-                'yaw': float(row['yawRad']),
-                'pitch': float(row['pitchRad']),
-                'roll': float(row['rollRad'])
+                'total_distance_traveled': float(row['distance_traveled_m']),
+                'x': float(row['x']),
+                'y': float(row['y']),
+                'z': float(row['z']),
+                'yaw': math.radians(float(row['yaw'])) % (2 * math.pi),
+                'pitch': math.radians(float(row['pitch'])) % (2 * math.pi),
+                'roll': math.radians(float(row['roll'])) % (2 * math.pi),
             }
             for row in csv_reader
         ]
@@ -434,7 +438,7 @@ def transmit_object_json(object_json_list, EntityMap, session: requests.Session)
             object_type = 'DOT_OSTR-TrafficSignalController-v1.3.4'
             entity_type = 'DOT_OSTR::Entities::TrafficSignalController'
         
-        tena_publisher_url = f"http://{PUBLISHER_IP}/v1/objects/{object_type}/{entity_type}"
+        tena_publisher_url = f"http://{PUBLISHER_ENDPOINT}/v1/objects/{object_type}/{entity_type}"
         
         logging.info(f"Transmitting {entity_type} {EntityName} to: {tena_publisher_url}")
 
@@ -508,7 +512,7 @@ def transmit_main(mapOrigin_queue, stdout_lock):
     print(f"Map Origin received from receive_thread: {mapOrigin}")
 
     # Connection check to ensure REST API is available
-    if not wait_for_port("127.0.0.1", 8004):
+    if not wait_for_port(PUBLISHER_IP, 8004):
         logging.error("REST API is not available")
         return
     
@@ -602,7 +606,7 @@ def receive_main(mapOrigin_queue, stdout_lock):
     """
 
     # Define host and port
-    HOST = '127.0.0.1'  # Listen on localhost
+    HOST = STREAMER_IP  # Listen on localhost
     PORT = 8005  # Choose an unused port
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

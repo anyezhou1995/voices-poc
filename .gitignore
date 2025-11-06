@@ -37,6 +37,7 @@ config/node_info.config
 
 #waypoint output files
 scripts/carla_python_scripts/waypoint_files/
+scripts/json_scripts/old_waypoints
 
 #performance analysis outputs
 scripts/performance_analysis/results/
