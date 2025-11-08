@@ -518,6 +518,32 @@ def search_target_index(cx, cy, veh_trans, desired_speed):
 
     return look_ahead_idx_from(closest_index_on_trajectory())
 
+def search_target_index_v2(cx, cy, veh_trans, desired_speed, distance, distance_traveled):
+
+    def closest_index_on_trajectory():
+        idx = np.searchsorted(distance, distance_traveled)
+        candidates = []
+        for i in [-1, 0, 1]:
+            candidate_idx = idx + i
+            if 0 <= candidate_idx < len(cx):
+                candidates.append(candidate_idx)
+        dx = cx[candidates] - veh_trans.location.x
+        dy = cy[candidates] - veh_trans.location.y
+        return candidates[np.argmin(np.hypot(dx, dy))]
+
+    def look_ahead_idx_from(closest_index):
+        target_index = closest_index
+
+        look_ahead_dis = 1.*desired_speed + 0
+        #look_ahead_dis = 4.5
+        while look_ahead_dis > np.hypot(cx[target_index]-veh_trans.location.x, cy[target_index]-veh_trans.location.y):
+            if (target_index + 1) >= len(cx) or desired_speed < 0.1:
+                break
+            target_index += 1
+        return target_index
+
+    return look_ahead_idx_from(closest_index_on_trajectory())
+
 def search_target_index_lookBack(cx, cy, veh_trans, desired_speed):
 
     def closest_index_on_trajectory():

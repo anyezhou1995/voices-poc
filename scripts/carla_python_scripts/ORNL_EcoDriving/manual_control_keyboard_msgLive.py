@@ -161,7 +161,7 @@ def get_actor_display_name(actor, truncate=250):
 
 
 class World(object):
-    def __init__(self, carla_world, hud, args):
+    def __init__(self, carla_world, hud, spawn_loc, args):
         self.world = carla_world
         self.spectator = self.world.get_spectator()
         self._bev_height = 80.0
@@ -193,6 +193,7 @@ class World(object):
         #self._actor_filter = args.filter
         self._actor_filter = 'vehicle.toyota.prius'
         self._gamma = args.gamma
+        self.spawn_loc = spawn_loc
         self.restart(args)
         self.world.on_tick(hud.on_world_tick)
         self.recording_enabled = False
@@ -239,10 +240,11 @@ class World(object):
                     print('There are no spawn points available in your map/town.')
                     print('Please add some Vehicle Spawn Point to your UE4 scene.')
                     sys.exit(1)
-                spawn_points = self.map.get_spawn_points()
-                spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
+                #spawn_points = self.map.get_spawn_points()
+                #spawn_point = random.choice(spawn_points) if spawn_points else carla.Transform()
                 #spawn_point = carla.Transform(carla.Location(x=52.122, y=2.986, z=237.5), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
                 #spawn_point = carla.Transform(carla.Location(x=62.598, y=80.402, z=237.344), carla.Rotation(pitch=0.766, yaw=-105.963, roll=-0.953))
+                spawn_point = self.spawn_loc
 
             self.player = self.world.try_spawn_actor(blueprint, spawn_point)
         # Set up the sensors.
@@ -1142,7 +1144,7 @@ from agents.navigation.global_route_planner import GlobalRoutePlanner
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
 # Speed planner and low-level throttle/brake steering controller
-from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_lookBack
+from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_v2
 from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
@@ -1174,6 +1176,12 @@ def game_loop(args):
     last_dist2bar = 1e6
     record_freq = 2
 
+    df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
+    cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
+    c_pitch, c_yaw, c_roll = df_waypoints['pitch'].to_numpy(), df_waypoints['yaw'].to_numpy(), df_waypoints['roll'].to_numpy()
+    c_distance = df_waypoints['distance_traveled_m'].to_numpy()
+    spawn_pos = carla.Transform(carla.Location(x=cx[0], y=cy[0], z=3.0), carla.Rotation(pitch=0.0, yaw=c_yaw[0], roll=0.0))
+
     try:
         client = carla.Client(args.host, args.port)
         client.set_timeout(2.0)
@@ -1191,30 +1199,24 @@ def game_loop(args):
 
         # Set up the world client and vehicle low-level controller
         hud = HUD(args.width, args.height)
-        world = World(client.get_world(), hud, args)
+        world = World(client.get_world(), hud, spawn_pos, args)
         controller = KeyboardControl(world, args.autopilot)
 
         # Setup specs for eco-driving planner
         RefSpd, ref_cache = 0, 0
         speed, speed_cache = 0, 0
         x, y = 0, 0
+        distance_traveled = 0
         spatInfo = {}
-        cache_time = 0
+        cache_time, last_loop_time = 0, 0
         BSM_flag = False
 
         wp_id_cache, wp_id = 0, 0
 
-        df_waypoints = pd.read_csv('./ORNL_waypoints.csv') # Get record waypoints
-        cx, cy, cz = df_waypoints['x'].to_numpy(), df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
-
-        # Set a SPaT data to continue run the car
+        # Set a SPaT data to continue running the car
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
         reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
-
-        ## Read saved waypoints
-        #with open("wp_hist_0102", "r") as fp:
-            #wp_hist= json.load(fp)
 
         clock = pygame.time.Clock()
 
@@ -1295,7 +1297,11 @@ def game_loop(args):
             dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
             speed_diff = speed - speed_ego
 
-            print(dist2bar)
+            this_loop_time = datetime.datetime.now().timestamp()
+            distance_traveled += speed_ego * (this_loop_time - last_loop_time)
+            last_loop_time = this_loop_time
+
+            #print(dist2bar)
             
             ## Too large spacing set to nan
             if spacing > 75 or np.isnan(speed):
@@ -1330,15 +1336,16 @@ def game_loop(args):
                     else:
                         print('Do CF', speed_ego, speed, spacing)
                         uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
-                    RefSpd = min(15, RefSpd)
+                    RefSpd = min(35, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
             except:
                 print('------------------------Cannot get advisory speed!!!------------------------')
+                RefSpd = 35
 
             print('At time: ', reference_timestamp)
             print(spatCache)
             print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
-            print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; To stopbar: ', dist2bar, '--------------------------')
+            print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; Travel distance: ', distance_traveled, ' To stopbar: ', dist2bar, '--------------------------')
             
             #print(controller.eco_drive)
             #speed2go = 3.6*speed
@@ -1349,13 +1356,13 @@ def game_loop(args):
 
             ## Get the desired waypoint
             if controller.eco_drive:
-                wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
-                #wp_id = search_target_index(cx, cy, world.player.get_transform(), speed_ego)
+                #wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
+                wp_id = search_target_index_v2(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6, c_distance, distance_traveled)
                 #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
             
             #print('########### wp id: ' + str(wp_id))
             ## get the reference transformation
-            ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],cz[wp_id]), ref_rotation)
+            ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],float(cz[wp_id])), ref_rotation)
             
             ## Compute the desired reference speed in km per hr
             speed2go = RefSpd*1.6
