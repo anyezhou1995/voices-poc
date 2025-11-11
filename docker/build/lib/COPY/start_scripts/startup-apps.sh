@@ -206,6 +206,7 @@ if [[ $VUG_DOCKER_START_JSON_PUBLISHER == true ]]; then
    sleep 5s
 fi
 
+
 if [[ $VUG_DOCKER_START_V2X_ADAPTER == true ]]; then
    echo "STARTING TENA V2X ADAPTER"
    $HOME/distributed-testing/scripts/run_scripts/start-tv2x-adapter.sh &

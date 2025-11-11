@@ -63,7 +63,7 @@ import json_templates
 # Global Configurations
 # =================================
 LOCAL_ADDRESS = os.environ['VUG_LOCAL_ADDRESS']
-SELECTED_WAYPOINT_CSV = "delave_waypoints.csv" # CSV file containing waypoint data
+SELECTED_WAYPOINT_CSV = "/home/dt_user/distributed-testing/scripts/json_scripts/delave_waypoints.csv" # CSV file containing waypoint data
 GET_OBJECT_TYPE = "waypoints"  # options are "waypoints" or "api"
 COORDINATE_FORMAT = "ltpENU" # options are "geocentric" or "ltpENU"
 PUBLISHER_IP = LOCAL_ADDRESS
