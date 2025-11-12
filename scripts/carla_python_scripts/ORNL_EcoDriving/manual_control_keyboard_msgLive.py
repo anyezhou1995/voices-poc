@@ -1336,11 +1336,11 @@ def game_loop(args):
                     else:
                         print('Do CF', speed_ego, speed, spacing)
                         uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
-                    RefSpd = min(35, RefSpd)
+                    RefSpd = min(40, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
             except:
                 print('------------------------Cannot get advisory speed!!!------------------------')
-                RefSpd = 35
+                RefSpd = 40
 
             print('At time: ', reference_timestamp)
             print(spatCache)
