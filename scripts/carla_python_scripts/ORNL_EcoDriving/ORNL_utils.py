@@ -519,8 +519,20 @@ def search_target_index(cx, cy, veh_trans, desired_speed):
     return look_ahead_idx_from(closest_index_on_trajectory())
 
 def search_target_index_v2(cx, cy, veh_trans, desired_speed, distance, distance_traveled):
+    """
+    Parameters:
+    cx: list of x coordinates of the waypoint breadcrumbs
+    cy: list of y coordinates of the waypoint breadcrumbs
+    veh_trans: currnet vehicle transform
+    desired_speed: desired speed of the vehicle
+    distance: list of cumulative distances along the waypoint breadcrumbs
+    distance_traveled: current distance traveled by the ego vehicle
 
+    Returns:
+    target_index: index of the target waypoint ahead of the vehicle
+    """
     def closest_index_on_trajectory():
+        # complexity of log(n)
         idx = np.searchsorted(distance, distance_traveled)
         candidates = []
         for i in [-1, 0, 1]:

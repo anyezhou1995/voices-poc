@@ -1339,13 +1339,13 @@ def game_loop(args):
                     RefSpd = min(40, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
             except:
-                print('------------------------Cannot get advisory speed!!!------------------------')
+                print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
                 RefSpd = 40
 
             print('At time: ', reference_timestamp)
             print(spatCache)
-            print('--------------------Ego speed: ', speed_ego*3.6/1.6, 'Reference speed: ', RefSpd, ';  Lead speed: ', speed*3.6/1.6, '----------------------')
-            print('-------------------- Gap: ', spacing, '; Speed diff: ', speed_diff, '; Travel distance: ', distance_traveled, ' To stopbar: ', dist2bar, '--------------------------')
+            print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
+            #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
             
             #print(controller.eco_drive)
             #speed2go = 3.6*speed

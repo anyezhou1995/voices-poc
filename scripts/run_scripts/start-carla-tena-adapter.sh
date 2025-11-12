@@ -66,7 +66,7 @@ fi
 
 localadapterPath=$VUG_LOCAL_INSTALL_PATH/$VUG_CARLA_ADAPTER_VERSION
 
-adapterVerbosity='1'
+adapterVerbosity='4' # from 1 to 4 for some info
 
 useBestEffort=''
 if [[ $VUG_USE_BEST_EFFORT == true ]]; then
