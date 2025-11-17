@@ -85,6 +85,8 @@ import math
 import random
 import re
 import weakref
+import cv2
+from collections import deque
 
 try:
     import pygame
@@ -1080,6 +1082,11 @@ class CameraManager(object):
 # -- game_loop() ---------------------------------------------------------------
 # ==============================================================================
 
+def carla_image_to_bgr(image: carla.Image) -> np.ndarray:
+    """Convert CARLA raw BGRA bytes to OpenCV BGR ndarray."""
+    arr = np.frombuffer(image.raw_data, dtype=np.uint8)
+    arr = arr.reshape((image.height, image.width, 4))
+    return arr[:, :, :3]  # drop alpha (BGRA -> BGR)
 
 def game_loop(args):
     pygame.init()
@@ -1098,22 +1105,111 @@ def game_loop(args):
         world = World(client.get_world(), hud, args)
         controller = KeyboardControl(world, args.autopilot)
 
+        original_settings = world.world.get_settings()
+        settings = world.world.get_settings()
+        settings.fixed_delta_seconds = 0.05
+        settings.synchronous_mode = True
+        world.world.apply_settings(settings)
+
+        cam_tf = carla.Transform(
+            carla.Location(x=1.5, z=1.5),
+            carla.Rotation(pitch=0.0, yaw=0.0, roll=0.0))
+
+        bp_lb = world.world.get_blueprint_library()
+        cam30_bp = bp_lb.find('sensor.camera.rgb')
+        cam30_bp.set_attribute('image_size_x', '1928')
+        cam30_bp.set_attribute('image_size_y', '1208')
+        cam30_bp.set_attribute('fov', '30')
+        cam30 = world.world.spawn_actor(cam30_bp, cam_tf, attach_to=world.player)
+
+        cam60_bp = bp_lb.find('sensor.camera.rgb')
+        cam60_bp.set_attribute('image_size_x', '1928')
+        cam60_bp.set_attribute('image_size_y', '1208')
+        cam60_bp.set_attribute('fov', '60')
+        cam60 = world.world.spawn_actor(cam60_bp, cam_tf, attach_to=world.player)
+
+        buf30, buf60 = {}, {}
+        ordered_keys = deque(maxlen=30)
+
+        def on_cam30(image):
+            frame = image.frame
+            buf30[frame] = carla_image_to_bgr(image)
+            ordered_keys.append(frame)
+
+        def on_cam60(image):
+            frame = image.frame
+            buf60[frame] = carla_image_to_bgr(image)
+            ordered_keys.append(frame)
+
+        cam30.listen(on_cam30)
+        cam60.listen(on_cam60)
+
+        window = "FOV Comparison (Left: 30°, Right: 60°) — press Q to quit"
+        cv2.namedWindow(window, cv2.WINDOW_NORMAL)
+
         clock = pygame.time.Clock()
         while True:
             clock.tick_busy_loop(60)
             if controller.parse_events(client, world, clock,args):
                 return
             world.tick(clock)
+            
+            # Try to find a frame present in both buffers (prefer the latest)
+            match_frame = None
+            # iterate from right (newest) to left
+            for fr in reversed(ordered_keys):
+                if fr in buf30 and fr in buf60:
+                    match_frame = fr
+                    break
+
+            if match_frame is not None:
+                img30 = buf30.pop(match_frame)
+                img60 = buf60.pop(match_frame)
+
+                # Optional labeling
+                cv2.putText(img30, "30° FOV", (20, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+                cv2.putText(img60, "60° FOV", (20, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2)
+
+                # Ensure same height for safe concat (they are, but guard anyway)
+                h = min(img30.shape[0], img60.shape[0])
+                if img30.shape[0] != h:
+                    img30 = cv2.resize(img30, (int(img30.shape[1]), h))
+                if img60.shape[0] != h:
+                    img60 = cv2.resize(img60, (int(img60.shape[1]), h))
+
+                side_by_side = cv2.hconcat([img30, img60])
+                cv2.imshow(window, side_by_side)
+
+                # Clean up old frame keys beyond small horizon
+                while len(ordered_keys) > 0 and ordered_keys[0] < match_frame - 5:
+                    k = ordered_keys.popleft()
+                    buf30.pop(k, None)
+                    buf60.pop(k, None)
+
+            # Quit on 'q'
+            if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
+                break
+
             world.render(display)
             pygame.display.flip()
 
     finally:
+
+        world.world.apply_settings(original_settings)
 
         if (world and world.recording_enabled):
             client.stop_recorder()
 
         if world is not None:
             world.destroy()
+            cam30.stop()
+            cam30.destroy()
+            cam60.stop()
+            cam60.destroy()
+
+        cv2.destroyAllWindows()
 
         pygame.quit()
 

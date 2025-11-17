@@ -403,6 +403,315 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
     return greenWindow
 
 
+def determine_signal_phase_from_map(ego_location, map_message, max_search_distance=100.0):
+    """Return the traffic signal group (phase) that matches the ego vehicle location and travel direction.
+
+    Parameters
+    ----------
+    ego_location : carla.Location | dict | tuple
+        Current ego pose. Supports CARLA ``Location`` objects, dictionaries with
+        ``x``/``y`` or ``lat``/``long`` keys, or 2-tuples of (x, y).
+    map_message : str | dict | callable
+        MAP data as a hex string, already-decoded dictionary, or the callable
+        returned by ``J2735.DSRC.MessageFrame`` after ``from_uper`` is invoked.
+    max_search_distance : float, optional
+        Maximum allowed distance (meters) between the ego position and the
+        projected lane centerline before giving up; defaults to 100 meters.
+
+    Returns
+    -------
+    dict | None
+        When a candidate lane is found a dictionary is returned with the keys
+        ``signal_group``, ``lane_id``, ``distance``, ``intersection_id`` and
+        ``approach_id``. ``None`` is returned if no viable signal group can be
+        determined.
+    """
+
+    def _decode_map(payload):
+        """ Decode MAP message from various input formats.
+        Parameters
+        ----------
+        payload : str | dict | callable
+            MAP data as a hex string, already-decoded dictionary, or the callable
+            returned by ``J2735.DSRC.MessageFrame`` after ``from_uper`` is invoked.
+        Returns
+        -------
+        dict | None
+            Decoded MAP message as a dictionary, or ``None`` if decoding failed.
+        """
+        if payload is None:
+            return None
+        if isinstance(payload, dict):
+            return payload
+        if hasattr(payload, '__call__'):
+            return payload()
+        if isinstance(payload, str):
+            stripped = payload.strip().lower()
+            if stripped.startswith('0x'):
+                stripped = stripped[2:]
+            try:
+                return json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                pass
+            try:
+                decoded = J2735.DSRC.MessageFrame
+                decoded.from_uper(ba.unhexlify(stripped))
+                return decoded()
+            except Exception:
+                return None
+        return None
+
+    def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
+        """ Convert lat/lon to local XY coordinates relative to MCITY origin.
+        ## TODO: use Delave map origin to replace mcity_origin
+        """
+        xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
+        return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
+
+    def _extract_lat_lon(record):
+        """ Extract lat, lon, elevation from a record.
+        Note that 2735 stores lat/lon as signed integers in 1e‑7 degrees. 
+        Valid latitude is within ±90°, longitude within ±180°. 
+        If the raw value has a magnitude larger than that, it’s almost certainly the scaled integer, 
+        so we divide by 1e7 to get degrees.
+        """
+        if record is None:
+            return None, None, 0.0
+        lat = record.get('lat') if isinstance(record, dict) else None
+        lon = record.get('long') if isinstance(record, dict) else None
+        elev = record.get('elevation') if isinstance(record, dict) else 0.0
+        if lat is None or lon is None:
+            return None, None, 0.0
+        if abs(lat) > 90:
+            lat = lat / 1e7
+        if abs(lon) > 180:
+            lon = lon / 1e7
+        if elev is None:
+            elev = 0.0
+        elif abs(elev) > 10000:
+            elev = elev / 10.0
+        return lat, lon, elev
+
+    def _location_to_xy(location):
+        """ Convert various location formats to local XY coordinates.
+        Will call _latlon_to_local_xy internally.
+        """
+        if location is None:
+            return None
+        if isinstance(location, carla.Location):
+            return location.x, location.y
+        if isinstance(location, tuple) or isinstance(location, list):
+            return float(location[0]), float(location[1])
+        if isinstance(location, dict):
+            if 'x' in location and 'y' in location:
+                return float(location['x']), float(location['y'])
+            lat_key = 'lat' if 'lat' in location else 'latitude' if 'latitude' in location else None
+            lon_key = 'long' if 'long' in location else 'lon' if 'lon' in location else 'longitude' if 'longitude' in location else None
+            if lat_key and lon_key:
+                lat = location[lat_key]
+                lon = location[lon_key]
+                if abs(lat) > 90:
+                    lat = lat / 1e7
+                if abs(lon) > 180:
+                    lon = lon / 1e7
+                elev = location.get('elevation') or location.get('elev') or 0.0
+                if abs(elev) > 10000:
+                    elev = elev / 10.0
+                return _latlon_to_local_xy(lat, lon, elev)
+        return None
+
+    def _node_delta_to_offset(delta, ref_geo):
+        """ Convert a node delta to an (x, y) offset.
+        Returns a tuple of (offset, mode), where offset is a numpy array
+        of (x, y) coordinates, and mode is either 'absolute' or 'relative'.
+        Parameters
+        ----------
+        delta : dict
+            Delta dictionary from a lane node.
+        ref_geo : tuple
+            Reference (lat, lon, elevation) for the intersection reference point.
+        Returns
+        -------
+        np.array | None, str | None
+            Offset as a numpy array and mode string, or (None, None) if
+            the delta could not be interpreted.
+        """
+        if not isinstance(delta, dict):
+            return None, None
+        for key, value in delta.items():
+            ## Handle relative XY offsets: if the MAP stores x/y deltas in centimeters/decimeters 
+            ## relative to the previous point (or to the intersection reference point for the first node)
+            if key.startswith('node-XY') and isinstance(value, dict):
+                x_raw = value.get('x')
+                y_raw = value.get('y')
+                if x_raw is None or y_raw is None:
+                    continue
+                return np.array([x_raw / 10.0, y_raw / 10.0]), 'relative'
+            ## If MAPs periodically “reset” the running offset by specifying a full latitude/longitude 
+            ## (plus optional elevation) instead of a delta
+            if key == 'node-LatLon' and isinstance(value, dict):
+                lat = value.get('lat')
+                lon = value.get('lon') or value.get('long')
+                elev = value.get('elevation') or value.get('elev') or ref_geo[2]
+                if lat is None or lon is None:
+                    continue
+                if abs(lat) > 90:
+                    lat = lat / 1e7
+                if abs(lon) > 180:
+                    lon = lon / 1e7
+                if abs(elev) > 10000:
+                    elev = elev / 10.0
+                absolute_xy = _latlon_to_local_xy(lat, lon, elev)
+                return np.array(absolute_xy), 'absolute'
+        return None, None
+
+    def _build_lane_points(lane, ref_xy, ref_geo):
+        """ Build a list of (x, y) points for the given lane.
+        Uses the lane's nodeList to construct the points, interpreting
+        deltas as either absolute lat/lon or relative x/y offsets.
+        Parameters
+        ----------
+        lane : dict
+            Lane dictionary from the MAP message.
+        ref_xy : tuple | None
+            Reference (x, y) coordinates for the intersection reference point.
+        ref_geo : tuple
+            Reference (lat, lon, elevation) for the intersection reference point.
+        Returns
+        -------
+        list of (x, y) tuples
+            List of points defining the lane centerline.
+        """
+        node_list = lane.get('nodeList') if isinstance(lane, dict) else None
+        if not node_list:
+            return []
+        nodes = node_list.get('nodes') if isinstance(node_list, dict) else None
+        if not nodes:
+            return []
+        points = []
+        last_point = None
+        for node in nodes:
+            delta = node.get('delta') if isinstance(node, dict) else None
+            offset, mode = _node_delta_to_offset(delta, ref_geo)
+            if offset is None:
+                continue
+            if mode == 'absolute':
+                last_point = offset
+            else:
+                if last_point is None:
+                    if ref_xy is None:
+                        continue
+                    last_point = np.array(ref_xy) + offset
+                else:
+                    last_point = last_point + offset
+            points.append((float(last_point[0]), float(last_point[1])))
+        return points
+
+    def _point_to_polyline_distance(point, polyline):
+        """ Compute the minimum distance from a point to a polyline.
+        Parameters
+        ----------
+        point : tuple
+            (x, y) coordinates of the point.
+        polyline : list of tuples
+            List of (x, y) coordinates defining the polyline.
+        Returns
+        -------
+        float
+            Minimum distance from the point to the polyline.
+        """
+        if point is None or not polyline:
+            return float('inf')
+        px, py = point
+        best = float('inf')
+        for idx in range(len(polyline) - 1):
+            x1, y1 = polyline[idx]
+            x2, y2 = polyline[idx + 1]
+            dx = x2 - x1
+            dy = y2 - y1
+            if dx == 0 and dy == 0:
+                dist = math.hypot(px - x1, py - y1)
+            else:
+                t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)
+                t = max(0.0, min(1.0, t))
+                proj_x = x1 + t * dx
+                proj_y = y1 + t * dy
+                dist = math.hypot(px - proj_x, py - proj_y)
+            if dist < best:
+                best = dist
+        return best
+
+    def _collect_signal_groups(lane):
+        """ Put the signal groups of the lane and lanes connected to it into a list.
+        Parameters
+        ----------
+        lane : dict
+            Lane dictionary from the MAP message.
+        Returns
+        -------
+        list of int
+            List of unique signal groups associated with the lane.
+        """
+        groups = []
+        for connection in lane.get('connectsTo', []):
+            signal_group = connection.get('signalGroup')
+            if signal_group is None and isinstance(connection.get('connectingLane'), dict):
+                signal_group = connection['connectingLane'].get('signalGroup')
+            if signal_group is not None and signal_group not in groups:
+                groups.append(signal_group)
+        return groups
+
+    ## 1. Decode MAP message
+    decoded_map = _decode_map(map_message)
+    ego_xy = _location_to_xy(ego_location)
+    if decoded_map is None or ego_xy is None:
+        return None
+
+    ## 2. Iterate through intersections and lanes to find best matching signal group
+    map_body = decoded_map.get('value') if isinstance(decoded_map, dict) else None
+    if isinstance(map_body, list) and len(map_body) > 1:
+        map_body = map_body[1]
+    if not isinstance(map_body, dict):
+        return None
+    intersections = map_body.get('intersections', [])
+    if not intersections:
+        return None
+
+    best_match = None
+    for intersection in intersections:
+        # get intersection reference point
+        ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
+        if ref_lat is None or ref_lon is None:
+            continue
+        # get reference point in local XY
+        ref_xy = _latlon_to_local_xy(ref_lat, ref_lon, ref_elev)
+        # get lanes associated with the intersection
+        lane_set = intersection.get('laneSet', [])
+        for lane in lane_set:
+            signal_groups = _collect_signal_groups(lane)
+            if not signal_groups:
+                continue
+            # get lane centerline points
+            lane_points = _build_lane_points(lane, ref_xy, (ref_lat, ref_lon, ref_elev))
+            if len(lane_points) < 2:
+                continue
+            # compute distance from ego vehicle to lane centerline
+            distance = _point_to_polyline_distance(ego_xy, lane_points)
+            if distance > max_search_distance:
+                continue
+            # collect best match
+            if best_match is None or distance < best_match['distance']:
+                best_match = {
+                    'signal_group': signal_groups[0],
+                    'lane_id': lane.get('laneID'),
+                    'distance': distance,
+                    'intersection_id': intersection.get('id', {}).get('id'),
+                    'approach_id': lane.get('ingressApproach') or lane.get('egressApproach')
+                }
+
+    return best_match
+
+
 def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, reference_timestamp, SpatData):
     """
     :param cav_spd: vehicle current speed, mph
