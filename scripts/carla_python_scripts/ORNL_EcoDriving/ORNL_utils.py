@@ -29,6 +29,22 @@ barPos_x, barPos_y = 53.33, -23.77
 
 draw_lifetime = 1/60
 
+_cached_map_state = {
+    "decoded_map": None,
+    "timestamp": None,
+    "last_match": None
+}
+
+_cached_intersections = {}
+
+_cached_bsm_state = {
+    "decoded_bsm": None,
+    "timestamp": None,
+    "last_leader": None
+}
+
+_cached_vehicles = {}
+
 def draw_box(world, x, y, z):
     box_center = carla.Location(x=x, y=y, z=z)
  
@@ -402,64 +418,19 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
 
     return greenWindow
 
-
-def determine_signal_phase_from_map(ego_location, map_message, max_search_distance=100.0):
-    """Return the traffic signal group (phase) that matches the ego vehicle location and travel direction.
-
-    Parameters
-    ----------
-    ego_location : carla.Location | dict | tuple
-        Current ego pose. Supports CARLA ``Location`` objects, dictionaries with
-        ``x``/``y`` or ``lat``/``long`` keys, or 2-tuples of (x, y).
-    map_message : str | dict | callable
-        MAP data as a hex string, already-decoded dictionary, or the callable
-        returned by ``J2735.DSRC.MessageFrame`` after ``from_uper`` is invoked.
-    max_search_distance : float, optional
-        Maximum allowed distance (meters) between the ego position and the
-        projected lane centerline before giving up; defaults to 100 meters.
-
-    Returns
-    -------
-    dict | None
-        When a candidate lane is found a dictionary is returned with the keys
-        ``signal_group``, ``lane_id``, ``distance``, ``intersection_id`` and
-        ``approach_id``. ``None`` is returned if no viable signal group can be
-        determined.
-    """
-
-    def _decode_map(payload):
-        """ Decode MAP message from various input formats.
-        Parameters
-        ----------
-        payload : str | dict | callable
-            MAP data as a hex string, already-decoded dictionary, or the callable
-            returned by ``J2735.DSRC.MessageFrame`` after ``from_uper`` is invoked.
-        Returns
-        -------
-        dict | None
-            Decoded MAP message as a dictionary, or ``None`` if decoding failed.
-        """
-        if payload is None:
+    def _heading_vector(location, override_heading):
+        """Return unit vector that represents ego forward direction."""
+        yaw_deg = None
+        if override_heading is not None:
+            yaw_deg = override_heading
+        elif isinstance(location, carla.Transform):
+            yaw_deg = location.rotation.yaw
+        elif isinstance(location, dict):
+            yaw_deg = location.get('yaw') or location.get('heading')
+        if yaw_deg is None:
             return None
-        if isinstance(payload, dict):
-            return payload
-        if hasattr(payload, '__call__'):
-            return payload()
-        if isinstance(payload, str):
-            stripped = payload.strip().lower()
-            if stripped.startswith('0x'):
-                stripped = stripped[2:]
-            try:
-                return json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                pass
-            try:
-                decoded = J2735.DSRC.MessageFrame
-                decoded.from_uper(ba.unhexlify(stripped))
-                return decoded()
-            except Exception:
-                return None
-        return None
+        yaw_rad = math.radians(yaw_deg)
+        return np.array([math.cos(yaw_rad), math.sin(yaw_rad)])
 
     def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
         """ Convert lat/lon to local XY coordinates relative to MCITY origin.
@@ -498,6 +469,8 @@ def determine_signal_phase_from_map(ego_location, map_message, max_search_distan
         """
         if location is None:
             return None
+        if isinstance(location, carla.Transform):
+            return location.location.x, location.location.y
         if isinstance(location, carla.Location):
             return location.x, location.y
         if isinstance(location, tuple) or isinstance(location, list):
@@ -518,6 +491,72 @@ def determine_signal_phase_from_map(ego_location, map_message, max_search_distan
                 if abs(elev) > 10000:
                     elev = elev / 10.0
                 return _latlon_to_local_xy(lat, lon, elev)
+        return None
+
+
+def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=None, max_search_distance=100.0):
+    """Return the traffic signal group (phase) that matches the ego vehicle location and travel direction.
+
+    Parameters
+    ----------
+    ego_location : carla.Location | dict | tuple
+        Current ego pose. Supports CARLA ``Location`` objects, dictionaries with
+        ``x``/``y`` or ``lat``/``long`` keys, or 2-tuples of (x, y).
+    map_message : str | dict | callable | None
+        MAP data as a hex string, already-decoded dictionary, or the callable
+        returned by ``J2735.DSRC.MessageFrame`` after ``from_uper`` is invoked.
+        If ``None``, the most recently decoded MAP will be reused so that lane
+        selection can continue between MAP broadcasts.
+    ego_heading : float | None
+        Optional vehicle heading/yaw in degrees (CARLA convention). If omitted,
+        the function attempts to infer yaw from a CARLA ``Transform`` or a
+        dictionary with ``yaw``/``heading`` keys.
+    max_search_distance : float, optional
+        Maximum allowed distance (meters) between the ego position and the
+        projected lane centerline before giving up; defaults to 100 meters.
+
+    Returns
+    -------
+    dict | None
+        When a candidate lane is found a dictionary is returned with the keys
+        ``signal_group``, ``lane_id``, ``distance``, ``intersection_id`` and
+        ``approach_id``. ``None`` is returned if no viable signal group can be
+        determined and no cached selection exists. Cached results are annotated
+        with ``stale: True``.
+    """
+
+    def _decode_map(payload):
+        """ Decode MAP message from various input formats.
+        Parameters
+        ----------
+        payload : str | dict | callable
+            MAP data as a hex string, already-decoded dictionary, or the callable
+            returned by ``J2735.DSRC.MessageFrame`` after ``from_uper`` is invoked.
+        Returns
+        -------
+        dict | None
+            Decoded MAP message as a dictionary, or ``None`` if decoding failed.
+        """
+        if payload is None:
+            return None
+        if isinstance(payload, dict):
+            return payload
+        if hasattr(payload, '__call__'):
+            return payload()
+        if isinstance(payload, str):
+            stripped = payload.strip().lower()
+            if stripped.startswith('0x'):
+                stripped = stripped[2:]
+            try:
+                return json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                pass
+            try:
+                decoded = J2735.DSRC.MessageFrame
+                decoded.from_uper(ba.unhexlify(stripped))
+                return decoded()
+            except Exception:
+                return None
         return None
 
     def _node_delta_to_offset(delta, ref_geo):
@@ -661,10 +700,20 @@ def determine_signal_phase_from_map(ego_location, map_message, max_search_distan
                 groups.append(signal_group)
         return groups
 
-    ## 1. Decode MAP message
-    decoded_map = _decode_map(map_message)
+    ## 1. Decode MAP message (or reuse cached) and convert ego location
+    decoded_map = _decode_map(map_message) if map_message is not None else None
+    if decoded_map is not None:
+        _cached_map_state['decoded_map'] = decoded_map
+        _cached_map_state['timestamp'] = time.time()
+    else:
+        decoded_map = _cached_map_state['decoded_map']
     ego_xy = _location_to_xy(ego_location)
+    heading_vec = _heading_vector(ego_location, ego_heading)
     if decoded_map is None or ego_xy is None:
+        if _cached_map_state['last_match'] is not None:
+            stale = dict(_cached_map_state['last_match'])
+            stale['stale'] = True
+            return stale
         return None
 
     ## 2. Iterate through intersections and lanes to find best matching signal group
@@ -672,45 +721,239 @@ def determine_signal_phase_from_map(ego_location, map_message, max_search_distan
     if isinstance(map_body, list) and len(map_body) > 1:
         map_body = map_body[1]
     if not isinstance(map_body, dict):
+        if _cached_map_state['last_match'] is not None:
+            stale = dict(_cached_map_state['last_match'])
+            stale['stale'] = True
+            return stale
         return None
     intersections = map_body.get('intersections', [])
-    if not intersections:
+    if intersections:
+        for intersection in intersections:
+            ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
+            intersection_id = intersection.get('id', {}).get('id')
+            if ref_lat is None or ref_lon is None or intersection_id is None:
+                continue
+            ref_xy = _latlon_to_local_xy(ref_lat, ref_lon, ref_elev)
+            _cached_intersections[intersection_id] = {
+                'intersection': intersection,
+                'ref_xy': ref_xy,
+                'geo': (ref_lat, ref_lon, ref_elev),
+                'timestamp': time.time()
+            }
+
+    if not _cached_intersections:
+        if _cached_map_state['last_match'] is not None:
+            stale = dict(_cached_map_state['last_match'])
+            stale['stale'] = True
+            return stale
         return None
 
-    best_match = None
-    for intersection in intersections:
-        # get intersection reference point
-        ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
-        if ref_lat is None or ref_lon is None:
+    ego_xy_vec = np.array(ego_xy)
+    candidate_list = []
+    for cached in _cached_intersections.values():
+        intersection = cached['intersection']
+        ref_xy = cached['ref_xy']
+        ref_geo = cached['geo']
+        vec_to_intersection = np.array(ref_xy) - ego_xy_vec
+        dist_to_intersection = np.linalg.norm(vec_to_intersection)
+        if dist_to_intersection < 1.0:
             continue
-        # get reference point in local XY
-        ref_xy = _latlon_to_local_xy(ref_lat, ref_lon, ref_elev)
-        # get lanes associated with the intersection
-        lane_set = intersection.get('laneSet', [])
-        for lane in lane_set:
-            signal_groups = _collect_signal_groups(lane)
-            if not signal_groups:
+        if heading_vec is not None:
+            forward_component = np.dot(vec_to_intersection, heading_vec)
+            if forward_component <= 0:
                 continue
-            # get lane centerline points
-            lane_points = _build_lane_points(lane, ref_xy, (ref_lat, ref_lon, ref_elev))
-            if len(lane_points) < 2:
-                continue
-            # compute distance from ego vehicle to lane centerline
-            distance = _point_to_polyline_distance(ego_xy, lane_points)
-            if distance > max_search_distance:
-                continue
-            # collect best match
-            if best_match is None or distance < best_match['distance']:
-                best_match = {
-                    'signal_group': signal_groups[0],
-                    'lane_id': lane.get('laneID'),
-                    'distance': distance,
-                    'intersection_id': intersection.get('id', {}).get('id'),
-                    'approach_id': lane.get('ingressApproach') or lane.get('egressApproach')
-                }
+        candidate_list.append((dist_to_intersection, intersection, ref_xy, ref_geo))
 
-    return best_match
+    if not candidate_list:
+        if _cached_map_state['last_match'] is not None:
+            stale = dict(_cached_map_state['last_match'])
+            stale['stale'] = True
+            return stale
+        return None
 
+    candidate_list.sort(key=lambda item: item[0])
+    target_distance, target_intersection, target_ref_xy, target_geo = candidate_list[0]
+
+    best_match = None
+    lane_set = target_intersection.get('laneSet', [])
+    for lane in lane_set:
+        signal_groups = _collect_signal_groups(lane)
+        if not signal_groups:
+            continue
+        lane_points = _build_lane_points(lane, target_ref_xy, target_geo)
+        if len(lane_points) < 2:
+            continue
+        distance = _point_to_polyline_distance(ego_xy, lane_points)
+        if distance > max_search_distance:
+            continue
+        if best_match is None or distance < best_match['distance']:
+            best_match = {
+                'signal_group': signal_groups[0],
+                'lane_id': lane.get('laneID'),
+                'distance': distance,
+                'intersection_id': target_intersection.get('id', {}).get('id'),
+                'approach_id': lane.get('ingressApproach') or lane.get('egressApproach'),
+                'intersection_distance': target_distance,
+                'stale': False
+            }
+
+    if best_match is not None:
+        _cached_map_state['last_match'] = dict(best_match)
+        return best_match
+
+    if _cached_map_state['last_match'] is not None:
+        stale = dict(_cached_map_state['last_match'])
+        stale['stale'] = True
+        return stale
+
+    return None
+
+def determine_leader(ego_location, bsm_message=None, ego_heading=None, max_search_distance=100.0):
+    """Return the lead vehicle BSM that is closest to the ego vehicle position and travel direction.
+
+    Parameters
+    ----------
+    ego_location : carla.Location | dict | tuple
+        Current ego pose. Supports CARLA ``Location`` objects, dictionaries with
+        ``x``/``y`` or ``lat``/``long`` keys, or 2-tuples of (x, y).
+    bsm_message : list of str | list of dict | None
+        List of BSM data as hex strings, already-decoded dictionaries.
+        If ``None``, the most recently decoded BSMs will be reused.
+    ego_heading : float | None
+        Optional vehicle heading/yaw in degrees (CARLA convention). If omitted,
+        the function attempts to infer yaw from a CARLA ``Transform`` or a
+        dictionary with ``yaw``/``heading`` keys.
+    max_search_distance : float, optional
+        Maximum allowed distance (meters) between the ego position and the
+        lead vehicle before giving up; defaults to 100 meters.
+
+    Returns
+    -------
+    dict | None
+        When a candidate lead vehicle is found a dictionary is returned with the keys
+        ``bsm_id``, ``distance``, ``leader_speed``, and ``leader_heading``.
+        ``None`` is returned if no viable lead vehicle can be determined.
+    """
+    ## BSM decoder
+    def _decode_bsm(payload):
+        """ Decode BSM message from various input formats.
+        Parameters
+        ----------
+        payload : str | dict
+            BSM data as a hex string or already-decoded dictionary.
+        Returns
+        -------
+        dict | None
+            Decoded BSM message as a dictionary, or ``None`` if decoding failed.
+        """
+        if payload is None:
+            return None
+        if isinstance(payload, dict):
+            return payload
+        if isinstance(payload, str):
+            stripped = payload.strip().lower()
+            if stripped.startswith('0x'):
+                stripped = stripped[2:]
+            try:
+                return json.loads(payload)
+            except (json.JSONDecodeError, TypeError):
+                pass
+            try:
+                decoded = J2735.DSRC.MessageFrame
+                decoded.from_uper(ba.unhexlify(stripped))
+                return decoded()
+            except Exception:
+                return None
+        return None
+    ## 1. decode BSM messages (or reuse cached) and convert ego location
+    decoded_bsm = _decode_bsm(bsm_message) if bsm_message is not None else None
+    if decoded_bsm is not None:
+        _cached_bsm_state['decoded_bsm'] = decoded_bsm
+        _cached_bsm_state['timestamp'] = time.time()
+    else:
+        decoded_bsm = _cached_bsm_state['decoded_bsm']
+    ego_xy = _location_to_xy(ego_location)
+    heading_vec = _heading_vector(ego_location, ego_heading)  # Implement heading vector calculation similar to MAP processing
+    if decoded_bsm is None or ego_xy is None:
+        if _cached_bsm_state['last_leader'] is not None:
+            stale = dict(_cached_bsm_state['last_leader'])
+            stale['stale'] = True
+            return stale
+        return None
+    bsm_body = decoded_bsm.get('value') if isinstance(decoded_bsm, dict) else None
+    if not isinstance(bsm_body, dict):
+        if _cached_bsm_state['last_leader'] is not None:
+            stale = dict(_cached_bsm_state['last_leader'])
+            stale['stale'] = True
+            return stale
+        return None
+    
+    ## 2. Implement logic to find lead vehicles based on ego position and heading
+    core_data = bsm_body.get('coreData', {})
+    if core_data:
+        bsm_id = core_data.get('id')
+        lat, lon, elev = core_data.get('lat'), core_data.get('long'), core_data.get('elev')  # Extract from core_data
+        bsm_xy = _latlon_to_local_xy(lat, long, elev)  # Convert lat/lon to local XY
+        bsm_heading = core_data.get('heading')  # Extract heading
+        _cached_vehicles[bsm_id] = {
+            'position': bsm_xy,
+            'heading': bsm_heading,
+            'timestamp': time.time()
+        }
+
+    if not _cached_vehicles:
+        if _cached_bsm_state['last_leader'] is not None:
+            stale = dict(_cached_bsm_state['last_leader'])
+            stale['stale'] = True
+            return stale
+        return None
+    
+    ego_xy_vec = np.array(ego_xy)
+    candidate_list = []
+    for vehicle, cached in _cached_vehicles.items():
+        vehicle_xy = cached['position']
+        vehicle_heading = cached['heading']
+        vehicle_speed = cached['speed']
+        vec_to_vehicle = np.array(vehicle_xy) - ego_xy_vec
+        dist_to_vehicle = np.linalg.norm(vec_to_vehicle)
+        if dist_to_vehicle < 1.0:
+            continue
+        if heading_vec is not None:
+            forward_component = np.dot(vec_to_vehicle, heading_vec)
+            if forward_component <= 0:
+                continue
+        candidate_list.append((vehicle, dist_to_vehicle, vehicle_speed, vehicle_heading))
+
+    if not candidate_list:
+        if _cached_bsm_state['last_leader'] is not None:
+            stale = dict(_cached_bsm_state['last_leader'])
+            stale['stale'] = True
+            return stale
+        return None
+    
+    candidate_list.sort(key=lambda item: item[1])
+    vehicle_bsmID, target_distance, target_speed, target_heading = candidate_list[0]
+
+    best_match = None
+    if target_distance <= max_search_distance:
+        best_match = {
+            'bsm_id': vehicle_bsmID,
+            'distance': target_distance,
+            'lead_speed': target_speed,
+            'lead_heading': target_heading,
+            'stale': False
+        }
+    
+    if best_match is not None:
+        _cached_bsm_state['last_leader'] = dict(best_match)
+        return best_match
+
+    if _cached_bsm_state['last_leader'] is not None:
+        stale = dict(_cached_bsm_state['last_leader'])
+        stale['stale'] = True
+        return stale
+            
+    return None
 
 def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, reference_timestamp, SpatData):
     """
