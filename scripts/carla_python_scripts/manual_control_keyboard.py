@@ -58,8 +58,9 @@ from __future__ import print_function
 
 import glob
 import os
-import sys
+
 import time
+import sys
 
 from find_carla_egg import find_carla_egg
 
@@ -131,6 +132,8 @@ try:
 except ImportError:
     raise RuntimeError('cannot import numpy, make sure numpy package is installed')
 
+import faulthandler
+faulthandler.enable()
 
 # ==============================================================================
 # -- Global functions ----------------------------------------------------------
@@ -217,7 +220,7 @@ class World(object):
         while self.player is None:
             if args.x and args.y and args.z:
                 print("spawning in custom loc")
-                spawn_point = carla.Transform(carla.Location(x=args.x,y=args.y,z=args.z),carla.Rotation(yaw=90))
+                spawn_point = carla.Transform(carla.Location(x=args.x,y=args.y,z=args.z),carla.Rotation(yaw=args.yaw,roll=args.roll,pitch=args.pitch))
             else:
                 if not self.map.get_spawn_points():
                     print('There are no spawn points available in your map/town.')
@@ -454,14 +457,40 @@ class KeyboardControl(object):
         v = world.player.get_velocity()
         speed = (3.6 * math.sqrt(v.x ** 2 + v.y ** 2 + v.z ** 2))
     
-        if keys[K_UP] or keys[K_w]:
-            if speed > args.speed_limit:
-                self._control.throttle = 0.0
-            else:
-                self._control.throttle = min(self._control.throttle + 0.01, 1)
+        max_throttle = 1.0
+        min_throttle = 0.0
 
+        # How aggressively throttle responds to speed error
+        kp = 0.16        # proportional gain
+        kd = 0.01        # derivative gain (damps overshoot)
+        smoothing = 0.25 # 0..1, how fast we move actual throttle toward target
+
+        if keys[K_UP] or keys[K_w]:
+            # Positive error = below speed limit, negative = above
+            error = args.speed_limit - speed
+
+            # Simple derivative on error (assuming roughly constant dt/frame)
+            derivative = error - self._prev_speed_error
+
+            # Raw controller output
+            raw_throttle = kp * error + kd * derivative
+
+            # Convert to a target throttle (no negative throttle, clamp to max)
+            target_throttle = max(min(raw_throttle, max_throttle), min_throttle)
+
+            # Smoothly approach the target throttle to avoid jerkiness
+            self._control.throttle += smoothing * (target_throttle - self._control.throttle)
+
+            # Clamp final throttle just in case
+            self._control.throttle = max(min(self._control.throttle, max_throttle), min_throttle)
+
+            # Remember for next frame
+            self._prev_speed_error = error
         else:
-            self._control.throttle = 0.0
+            # No “cruise” key: let off the gas gradually
+            decel_rate = 0.03
+            self._control.throttle = max(self._control.throttle - decel_rate, min_throttle)
+            self._prev_speed_error = 0.0
 
         if keys[K_DOWN] or keys[K_s]:
             self._control.brake = min(self._control.brake + 0.2, 1)
@@ -1129,13 +1158,22 @@ def main():
         help='Gamma correction of the camera (default: 2.2)')
     argparser.add_argument(
         '--x', type=float, 
-        help='x coordinate of the spawn point')
+        help='x coordinate of the spawn point in CARLA left handed coordinate system')
     argparser.add_argument(
         '--y', type=float, 
-        help='y coordinate of the spawn point')
+        help='y coordinate of the spawn point in CARLA left handed coordinate system')
     argparser.add_argument(
         '--z', type=float, 
-        help='z coordinate of the spawn point')
+        help='z coordinate of the spawn point in CARLA left handed coordinate system')
+    argparser.add_argument(
+        '--roll', type=float, default=0,
+        help='roll angle in degrees of the spawn point in CARLA left handed coordinate system')
+    argparser.add_argument(
+        '--pitch', type=float, default=0,
+        help='pitch angle in degrees of the spawn point in CARLA left handed coordinate system')
+    argparser.add_argument(
+        '--yaw', type=float, default=0,
+        help='yaw angle in degrees of the spawn point in CARLA left handed coordinate system')
     argparser.add_argument(
         '-s', '--speed_limit',
         metavar='S',

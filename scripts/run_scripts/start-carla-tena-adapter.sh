@@ -78,7 +78,7 @@ applicationID=$(( $(printf '%s' "$VUG_CARLA_ADAPTER_VERSION" | cksum | awk '{pri
 
 echo "----- STARTING VEHICLE E-BRAKE SCRIPT -----"
 
-python3 $VUG_LOCAL_DT_PATH/scripts/carla_python_scripts/stop_vehicles.py 2>&1 | awk '{ print "STOP VEHICLES: ", $0; fflush(); }'&
+python3 $VUG_LOCAL_DT_PATH/scripts/carla_python_scripts/stop_vehicles.py --host $VUG_CARLA_ADDRESS 2>&1 | awk '{ print "STOP VEHICLES: ", $0; fflush(); }'&
 
 mkdir -p $VUG_ADAPTER_LOG_PATH
 

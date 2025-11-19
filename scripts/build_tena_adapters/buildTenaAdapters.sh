@@ -137,17 +137,9 @@ echo "    [1]  vug-threads-library"
 echo "    [2]  vug-udp-protocolio"
 echo "    [3]  scenario-publisher"
 echo "    [4]  $vug_carla_adapter_name"
-echo "    [5]  tena-j2735-adapter"
-echo "    [6]  tena-j3224-adapter"
-echo "    [7]  tena-v2x-adapter"
-echo "    [8]  tena-entity-generator"
-echo "    [9]  tena-traffic-light-entity-generator"
-echo "    [10] carma-platform-tena-adapter"
-echo "    [11] v2xhub-tena-v2x-plugin"
-echo "    [12] v2xhub-tena-bsm-plugin"
-echo "    [13] v2xhub-tena-spat-plugin"
-echo "    [14] v2xhub-tena-mobility-plugin"
-echo "    [15] v2xhub-tena-traffic-control-plugin"
+echo "    [5]  tena-v2x-adapter"
+echo "    [6]  tena-entity-generator"
+echo "    [7]  v2xhub-tena-v2x-plugin"
 echo
 read -p "--> " tenaAppIndex
 
@@ -198,27 +190,6 @@ elif [[ $tenaAppIndex == 4 ]]; then
 	noBuildVersion=false
 
 elif [[ $tenaAppIndex == 5 ]]; then
-	# tenaApp=tena-j2735-message-adapter
-	tenaApp=vug-j2735-adapter
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-j2735-adapter.git"
-	dockerContainer=$buildGeneralImage
-	remoteAppDir=/home/dt_user/$tenaApp 			#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=false
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-
-elif [[ $tenaAppIndex == 6 ]]; then
-	tenaApp=vug-j3224-adapter
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-J3224-adapter.git"
-	dockerContainer=$buildGeneralImage
-	remoteAppDir=/home/dt_user/$tenaApp 			#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=false
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-
-elif [[ $tenaAppIndex == 7 ]]; then
 	tenaApp=vug-v2x-adapter
 	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-v2x-adapter.git"
 	dockerContainer=$buildGeneralImage
@@ -228,7 +199,7 @@ elif [[ $tenaAppIndex == 7 ]]; then
 	useMasterDefaultBranch=false
 	noBuildVersion=false
 
-elif [[ $tenaAppIndex == 8 ]]; then
+elif [[ $tenaAppIndex == 6 ]]; then
 	tenaApp=vug-entity-generator
 	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-entity-generator.git"
 	dockerContainer=$buildGeneralImage
@@ -238,69 +209,9 @@ elif [[ $tenaAppIndex == 8 ]]; then
 	useMasterDefaultBranch=false
 	noBuildVersion=false
 
-elif [[ $tenaAppIndex == 9 ]]; then
-	tenaApp=vug-traffic-light-entity-generator
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-traffic-light-entity-generator.git"
-	dockerContainer=$buildGeneralImage
-	remoteAppDir=/home/dt_user/$tenaApp 			#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=false
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-
-elif [[ $tenaAppIndex == 10 ]]; then
-	tenaApp=vug-carma-platform-adapter
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-carma-platform-adapter.git"
-	dockerContainer=$buildGeneralImage
-	remoteAppDir=/home/dt_user/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=false
-	requiresProtocolio=true
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-
-elif [[ $tenaAppIndex == 11 ]]; then
+elif [[ $tenaAppIndex == 7 ]]; then
 	tenaApp=vug-v2xhub-v2x-plugin
 	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-v2xhub-bsm-plugin.git"
-	dockerContainer=$buildV2xImage
-	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=true
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-
-elif [[ $tenaAppIndex == 12 ]]; then
-	tenaApp=vug-v2xhub-bsm-plugin
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-v2xhub-bsm-plugin.git"
-	dockerContainer=$buildV2xImage
-	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=true
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-
-elif [[ $tenaAppIndex == 13 ]]; then
-	tenaApp=vug-v2xhub-spat-plugin
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-v2xhub-spat-plugin.git"
-	dockerContainer=$buildV2xImage
-	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=true
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-	
-elif [[ $tenaAppIndex == 14 ]]; then
-	tenaApp=vug-v2xhub-mobility-plugin
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-v2xhub-mobility-plugin.git"
-	dockerContainer=$buildV2xImage
-	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
-	isV2xhubPlugin=true
-	requiresProtocolio=false
-	useMasterDefaultBranch=false
-	noBuildVersion=false
-	
-elif [[ $tenaAppIndex == 15 ]]; then
-	tenaApp=vug-v2xhub-traffic-control-plugin
-	gitCloneUrl="git@github.com:usdot-fhwa-stol/vug-v2xhub-traffic-control-plugin.git"
 	dockerContainer=$buildV2xImage
 	remoteAppDir=/home/V2X-Hub/src/$tenaApp	#DO NOT CHANGE: internal docker directory mapped to localAppDir
 	isV2xhubPlugin=true

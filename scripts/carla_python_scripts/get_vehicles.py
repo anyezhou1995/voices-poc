@@ -113,7 +113,15 @@ def main():
         
         #client = carla.Client()
         #client.set_timeout(10.0)
-        
+        # print("")
+        # print("All Vehicle Blueprints:")
+        blueprints = [bp for bp in world.get_blueprint_library().filter('vehicle.*')]
+        for blueprint in blueprints:
+            print(blueprint.id)
+            # for attr in blueprint:
+            #     print('  - {}'.format(attr))
+
+            
         print("All current vehicle locations")
         vehicles = world.get_actors().filter('vehicle.*')
         for vehicle in vehicles:
@@ -130,13 +138,7 @@ def main():
         #print(dir(trafficlights[0]))
         #for light in trafficlights:
             #print(light.get_group_traffic_lights())
-        # print("")
-        # print("All Vehicle Blueprints:")
-        # blueprints = [bp for bp in world.get_blueprint_library().filter('vehicle.*')]
-        # for blueprint in blueprints:
-        #     print(blueprint.id)
-        #     for attr in blueprint:
-        #         print('  - {}'.format(attr))
+        
 
     finally:
 

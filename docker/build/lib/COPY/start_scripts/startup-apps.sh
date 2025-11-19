@@ -231,16 +231,18 @@ fi
 if [[ $VUG_DOCKER_START_MANUAL_CARLA_VEHICLE == true ]]; then
    echo "STARTING MANUAL CARLA VEHICLE"
 
-   # if we are starting the carla adapter and a manual vehicle, we almost certainly are trying to use a vehicle from the scenario which should already be spawined
-   if [[ $VUG_DOCKER_MANUAL_CARLA_VEHICLE_IS_NEW == true ]]; then
-      echo "   SPAWNING NEW MANUAL VEHICLE"
-      python3 $HOME/distributed-testing/scripts/carla_python_scripts/manual_control_keyboard.py --rolename $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS --speed_limit $VUG_MANUAL_VEHICLE_SPEED_LIMIT 2>&1 | awk '{ print "MANUAL VEHICLE: ", $0; fflush(); }' &
-
-   else
-      echo "   CONNECTING TO SCENARIO MANUAL VEHICLE"
-      python3 $HOME/distributed-testing/scripts/carla_python_scripts/manual_control_keyboard_virtual.py --follow_vehicle $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS --speed_limit $VUG_MANUAL_VEHICLE_SPEED_LIMIT 2>&1 | awk '{ print "MANUAL VEHICLE: ", $0; fflush(); }' &
-
-   fi
+   # we have migrated to having all participants spawn in their own vehicles. the CARLA Adapter will no longer spawn in vehicles for people
+   # therefore we will always create a vehicle
+   echo "   SPAWNING NEW MANUAL VEHICLE"
+   python3 $HOME/distributed-testing/scripts/carla_python_scripts/manual_control_keyboard.py --rolename $VUG_MANUAL_VEHICLE_ID --host $VUG_CARLA_ADDRESS --speed_limit $VUG_MANUAL_VEHICLE_SPEED_LIMIT \
+   --x $VUG_MANUAL_VEHICLE_SPAWN_X \
+   --y $VUG_MANUAL_VEHICLE_SPAWN_Y \
+   --z $VUG_MANUAL_VEHICLE_SPAWN_Z \
+   --roll $VUG_MANUAL_VEHICLE_SPAWN_ROLL \
+   --pitch $VUG_MANUAL_VEHICLE_SPAWN_PITCH \
+   --yaw $VUG_MANUAL_VEHICLE_SPAWN_YAW \
+   --filter "${VUG_MANUAL_VEHICLE_MODEL}*"
+   2>&1 | awk '{ print "MANUAL VEHICLE: ", $0; fflush(); }' &
 
    sleep 5s
 fi

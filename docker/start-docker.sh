@@ -241,8 +241,8 @@ fi
 
 # check the configured EM address to see if it is not in IP format
 # if it is not in IP format, assume its a hostname and try to get IP from that
-echo $VUG_EM_ADDRESS
-echo $VUG_VPN_EM_ADDRESS
+# echo $VUG_EM_ADDRESS
+# echo $VUG_VPN_EM_ADDRESS
 if [[ ! "$VUG_EM_ADDRESS" =~ ^(([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))\.){3}([1-9]?[0-9]|1[0-9][0-9]|2([0-4][0-9]|5[0-5]))$ ]] && [[ ! "$VUG_EM_ADDRESS" == 'localhost' ]]; then
 
     # get the IP of the entered EM hostname
@@ -280,6 +280,7 @@ fi
 export VUG_VPN_LOCAL_ADDRESS=$vpn_local_ip_clean
 export VUG_VPN_EM_ADDRESS=$em_fqdn_address
 
+echo
 xhost +local:docker
 
 docker_compose_v2_version=$(docker compose version 2> /dev/null)
