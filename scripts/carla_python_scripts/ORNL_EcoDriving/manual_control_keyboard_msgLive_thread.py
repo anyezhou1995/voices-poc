@@ -1136,7 +1136,7 @@ from time import sleep
 import readline
 import pandas as pd
 from configparser import ConfigParser
-import json
+import json, threading
 #import matplotlib.pyplot as plt
 
 # Routing use
@@ -1162,6 +1162,63 @@ barPos_x, barPos_y = 53.33, -23.77
 
 update_gap = 1
 
+# Setup specs for eco-driving planner
+RefSpd, ref_cache = 0, 0
+speed, speed_cache = 0, 0
+x, y = 0, 0
+distance_traveled = 0
+
+cache_time, last_loop_time = 0, 0
+wp_id_cache, wp_id = 0, 0
+
+info_lock = threading.Lock()
+shutdown = threading.Event()
+
+#####################################
+# ----- receive_loop_thread ------- #
+#####################################
+
+def receive_loop():
+    try:
+        # Set the UDP specs
+        UDP_IP = "10.7.108.81"
+        UDP_PORT = 5398
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((UDP_IP, UDP_PORT))
+
+        spatInfo = {}
+        BSM_flag = False
+
+        # Set a SPaT data to continue running the car
+        #spatCache = {}
+        spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
+        reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
+
+        while True:
+            data, addr = sock.recvfrom(4096)
+            hex_data = data.hex()
+            with info_lock:
+                ## first receive to get SPaT
+                SPaT_flag, spatInfo = process_SPaT(hex_data)
+
+                ## second receive to get BSM
+                #data, addr = sock.recvfrom(4096)
+                #hex_data = data.hex()
+                BSM_flag, x1, y1, speed = process_BSM(hex_data)
+                # if BSM_flag:
+                #     print('BSM: ', BSM_flag, x1, y1, speed)
+
+    except Exception as e:
+        print(f"[Receive] Exception: {e}")
+    finally:
+        sock.close()
+        print("[Receive] Stopped")
+    
+
+#####################################
+# ----- carla_loop_thread --------- #
+#####################################
 
 def game_loop(args):
     pygame.init()
@@ -1190,33 +1247,10 @@ def game_loop(args):
             (args.width, args.height),
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
-        # Set the UDP specs
-        UDP_IP = "10.7.108.81"
-        UDP_PORT = 5398
-
-        #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #sock.bind((UDP_IP, UDP_PORT))
-
         # Set up the world client and vehicle low-level controller
         hud = HUD(args.width, args.height)
         world = World(client.get_world(), hud, spawn_pos, args)
         controller = KeyboardControl(world, args.autopilot)
-
-        # Setup specs for eco-driving planner
-        RefSpd, ref_cache = 0, 0
-        speed, speed_cache = 0, 0
-        x, y = 0, 0
-        distance_traveled = 0
-        spatInfo = {}
-        cache_time, last_loop_time = 0, 0
-        BSM_flag = False
-
-        wp_id_cache, wp_id = 0, 0
-
-        # Set a SPaT data to continue running the car
-        #spatCache = {}
-        spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
-        reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
 
         clock = pygame.time.Clock()
 
@@ -1224,15 +1258,6 @@ def game_loop(args):
 
         while True:
             clock.tick_busy_loop(60)
-
-            ## first receive to get SPat
-            '''
-            data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
-            hex_data = data.hex()
-            ### TODO Loop: a sub-process for info? another node to make sure data coming in
-            SPaT_flag, spatInfo = process_SPaT(hex_data)
-            '''
-
             #ref_trans = world.player.get_transform()
             ref_rotation = world.player.get_transform().rotation
             
@@ -1246,20 +1271,12 @@ def game_loop(args):
                     print('UCLA: ', actor.id, actor.get_transform().location.x, actor.get_transform().location.y)
                     ref_trans = actor.get_transform()
             '''
-            ## second receive to get BSM
-            '''
-            data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
-            hex_data = data.hex()
-            BSM_flag, x1, y1, speed = process_BSM(hex_data)
-            '''
+            with info_lock:
+                if BSM_flag is True:
+                    speed_cache = speed
+                elif BSM_flag is False and speed <= 0.1:
+                    speed = speed_cache
 
-            if BSM_flag is True:
-                speed_cache = speed
-            elif BSM_flag is False and speed <= 0.1:
-                speed = speed_cache
-
-            #if BSM_flag is True:
-                #print('BSM: ', BSM_flag, x1, y1, speed)
             
             ## Hardcoded UCLA vehicle as the leader
             for actor in actor_list:
@@ -1274,9 +1291,6 @@ def game_loop(args):
                     #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                     break
 
-            if BSM_flag is True:
-                #print('############ Carla map difference: ', x-x1, y-y1, '############')
-                pass
 
             '''
             if not BSM_flag:
@@ -1294,7 +1308,8 @@ def game_loop(args):
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
             spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
-            dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
+            #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
+            dist2bar = 100 ## Just a fake value to run
             speed_diff = speed - speed_ego
 
             this_loop_time = datetime.datetime.now().timestamp()
@@ -1477,12 +1492,19 @@ def main():
 
     print(__doc__)
 
+    thread_recv = threading.Thread(target=receive_loop, daemon=True)
+    thread_carla = threading.Thread(target=game_loop, args=(args,), daemon=True)
+
     try:
-
-        game_loop(args)
-
+        while thread_recv.is_alive() and thread_carla.is_alive():
+            sleep(0.1)
     except KeyboardInterrupt:
-        print('\nCancelled by user. Bye!')
+        print('\n [Main] Ctril+C Cancelled by user. Bye!')
+    finally:
+        shutdown.set()
+        thread_recv.join(timeout=2.0)
+        thread_carla.join(timeout=2.0)
+        print('[Main] Exit!')
 
 
 if __name__ == '__main__':

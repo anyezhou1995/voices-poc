@@ -162,7 +162,7 @@ def process_BSM(hex_data):
         decoded_msg.from_uper(ba.unhexlify(hex_data))
         # decoded_bsm = decoded_msg.to_json()
         decoded_bsm = decoded_msg()
-        #print(decoded_bsm)
+        print(decoded_bsm)
 
         bsmId = decoded_bsm['value'][1]['coreData']['id']
         decoded_bsm['value'][1]['coreData']['id'] = str(bsmId.hex())
@@ -199,6 +199,18 @@ def process_BSM(hex_data):
             '''
             return True, x, y, speed_converted
     return False, 0, 0, 0
+
+def decode_map(hex_data):
+    ##############################################################
+    # Decode MAP
+    ##############################################################
+    if hex_data.startswith("0012"):
+        print("Received MAP")
+        decoded_msg = J2735.DSRC.MessageFrame
+        decoded_msg.from_uper(ba.unhexlify(hex_data))
+        decoded_map = decoded_msg()
+        print("Decoded MAP: ")
+        print(str(decoded_msg.to_json()) + "\n")
 
 def decode_msg():
     ##############################################################
@@ -418,80 +430,80 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
 
     return greenWindow
 
-    def _heading_vector(location, override_heading):
-        """Return unit vector that represents ego forward direction."""
-        yaw_deg = None
-        if override_heading is not None:
-            yaw_deg = override_heading
-        elif isinstance(location, carla.Transform):
-            yaw_deg = location.rotation.yaw
-        elif isinstance(location, dict):
-            yaw_deg = location.get('yaw') or location.get('heading')
-        if yaw_deg is None:
-            return None
-        yaw_rad = math.radians(yaw_deg)
-        return np.array([math.cos(yaw_rad), math.sin(yaw_rad)])
-
-    def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
-        """ Convert lat/lon to local XY coordinates relative to MCITY origin.
-        ## TODO: use Delave map origin to replace mcity_origin
-        """
-        xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
-        return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
-
-    def _extract_lat_lon(record):
-        """ Extract lat, lon, elevation from a record.
-        Note that 2735 stores lat/lon as signed integers in 1e‑7 degrees. 
-        Valid latitude is within ±90°, longitude within ±180°. 
-        If the raw value has a magnitude larger than that, it’s almost certainly the scaled integer, 
-        so we divide by 1e7 to get degrees.
-        """
-        if record is None:
-            return None, None, 0.0
-        lat = record.get('lat') if isinstance(record, dict) else None
-        lon = record.get('long') if isinstance(record, dict) else None
-        elev = record.get('elevation') if isinstance(record, dict) else 0.0
-        if lat is None or lon is None:
-            return None, None, 0.0
-        if abs(lat) > 90:
-            lat = lat / 1e7
-        if abs(lon) > 180:
-            lon = lon / 1e7
-        if elev is None:
-            elev = 0.0
-        elif abs(elev) > 10000:
-            elev = elev / 10.0
-        return lat, lon, elev
-
-    def _location_to_xy(location):
-        """ Convert various location formats to local XY coordinates.
-        Will call _latlon_to_local_xy internally.
-        """
-        if location is None:
-            return None
-        if isinstance(location, carla.Transform):
-            return location.location.x, location.location.y
-        if isinstance(location, carla.Location):
-            return location.x, location.y
-        if isinstance(location, tuple) or isinstance(location, list):
-            return float(location[0]), float(location[1])
-        if isinstance(location, dict):
-            if 'x' in location and 'y' in location:
-                return float(location['x']), float(location['y'])
-            lat_key = 'lat' if 'lat' in location else 'latitude' if 'latitude' in location else None
-            lon_key = 'long' if 'long' in location else 'lon' if 'lon' in location else 'longitude' if 'longitude' in location else None
-            if lat_key and lon_key:
-                lat = location[lat_key]
-                lon = location[lon_key]
-                if abs(lat) > 90:
-                    lat = lat / 1e7
-                if abs(lon) > 180:
-                    lon = lon / 1e7
-                elev = location.get('elevation') or location.get('elev') or 0.0
-                if abs(elev) > 10000:
-                    elev = elev / 10.0
-                return _latlon_to_local_xy(lat, lon, elev)
+def _heading_vector(location, override_heading):
+    """Return unit vector that represents ego forward direction."""
+    yaw_deg = None
+    if override_heading is not None:
+        yaw_deg = override_heading
+    elif isinstance(location, carla.Transform):
+        yaw_deg = location.rotation.yaw
+    elif isinstance(location, dict):
+        yaw_deg = location.get('yaw') or location.get('heading')
+    if yaw_deg is None:
         return None
+    yaw_rad = math.radians(yaw_deg)
+    return np.array([math.cos(yaw_rad), math.sin(yaw_rad)])
+
+def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
+    """ Convert lat/lon to local XY coordinates relative to MCITY origin.
+    ## TODO: use Delave map origin to replace mcity_origin
+    """
+    xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
+    return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
+
+def _extract_lat_lon(record):
+    """ Extract lat, lon, elevation from a record.
+    Note that 2735 stores lat/lon as signed integers in 1e‑7 degrees. 
+    Valid latitude is within ±90°, longitude within ±180°. 
+    If the raw value has a magnitude larger than that, it’s almost certainly the scaled integer, 
+    so we divide by 1e7 to get degrees.
+    """
+    if record is None:
+        return None, None, 0.0
+    lat = record.get('lat') if isinstance(record, dict) else None
+    lon = record.get('long') if isinstance(record, dict) else None
+    elev = record.get('elevation') if isinstance(record, dict) else 0.0
+    if lat is None or lon is None:
+        return None, None, 0.0
+    if abs(lat) > 90:
+        lat = lat / 1e7
+    if abs(lon) > 180:
+        lon = lon / 1e7
+    if elev is None:
+        elev = 0.0
+    elif abs(elev) > 10000:
+        elev = elev / 10.0
+    return lat, lon, elev
+
+def _location_to_xy(location):
+    """ Convert various location formats to local XY coordinates.
+    Will call _latlon_to_local_xy internally.
+    """
+    if location is None:
+        return None
+    if isinstance(location, carla.Transform):
+        return location.location.x, location.location.y
+    if isinstance(location, carla.Location):
+        return location.x, location.y
+    if isinstance(location, tuple) or isinstance(location, list):
+        return float(location[0]), float(location[1])
+    if isinstance(location, dict):
+        if 'x' in location and 'y' in location:
+            return float(location['x']), float(location['y'])
+        lat_key = 'lat' if 'lat' in location else 'latitude' if 'latitude' in location else None
+        lon_key = 'long' if 'long' in location else 'lon' if 'lon' in location else 'longitude' if 'longitude' in location else None
+        if lat_key and lon_key:
+            lat = location[lat_key]
+            lon = location[lon_key]
+            if abs(lat) > 90:
+                lat = lat / 1e7
+            if abs(lon) > 180:
+                lon = lon / 1e7
+            elev = location.get('elevation') or location.get('elev') or 0.0
+            if abs(elev) > 10000:
+                elev = elev / 10.0
+            return _latlon_to_local_xy(lat, lon, elev)
+    return None
 
 
 def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=None, max_search_distance=100.0):
