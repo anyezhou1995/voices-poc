@@ -2,4 +2,4 @@
 
 docker exec -it --user root dt-core bash -c 'export HOME=/home/dt_user && export VUG_CARLA_EGG_DIR=$HOME/CARLA/PythonAPI/ \
 && cd $HOME/distributed-testing/scripts/carla_python_scripts/ORNL_EcoDriving/ \
-&& python3 manual_control_keyboard_msgLive.py --rolename ORNL-AUTO-1'
+&& python3 manual_control_keyboard_msgLive_thread.py --rolename ORNL-AUTO-1'
