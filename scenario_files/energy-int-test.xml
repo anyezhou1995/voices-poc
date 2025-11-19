@@ -11,7 +11,7 @@
 
   <vehicles>
 
-    <vehicle name="ORNL-AUTO-1" bsmid="f03ad628" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ORNL-AUTO-1" bsmid="f03ad628" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Constructive">
         <userData>
              <CARMA CARLAcosimulationIdentifier="CARLA-ORNL-1" roleName="ORNL-AUTO-1" generate_bsms="true"/>
         </userData>
@@ -21,7 +21,17 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="SWRI-AUTO-1" bsmid="f03ad627" type="vehicle.toyota.prius" owner="JSON-SWRI-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ORNL-M-1" bsmid="f03ad638" type="vehicle.toyota.prius" owner="CARLA-ORNL-1" material="Aluminum" lvcIndicator="Virtual">
+        <userData>
+             <CARMA CARLAcosimulationIdentifier="CARLA-ORNL-1" roleName="ORNL-M-1" generate_bsms="true"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="0.001800" longitudeInDegrees="0.001122" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
+            <Heading>21.85235</Heading>
+        </initialTSPI>
+    </vehicle>
+
+    <vehicle name="SWRI-AUTO-1" bsmid="f03ad627" type="vehicle.toyota.prius" owner="JSON-SWRI-1" material="Aluminum" lvcIndicator="Constructive">
         <userData>
              <CARMA CARLAcosimulationIdentifier="JSON-SWRI-1" roleName="SWRI-AUTO-1" generate_bsms="true"/>
         </userData>
@@ -31,7 +41,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="SWRI-M-1" bsmid="f03ad637" type="vehicle.toyota.prius" owner="CARLA-SWRI-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="SWRI-M-1" bsmid="f03ad637" type="vehicle.toyota.prius" owner="CARLA-SWRI-1" material="Aluminum" lvcIndicator="Virtual">
         <userData>
              <CARMA CARLAcosimulationIdentifier="CARLA-SWRI-1" roleName="SWRI-M-1" generate_bsms="true"/>
         </userData>
@@ -41,7 +51,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="ANL-AUTO-1" bsmid="f03ad626" type="vehicle.toyota.prius" owner="JSON-ANL-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="ANL-AUTO-1" bsmid="f03ad626" type="vehicle.toyota.prius" owner="JSON-ANL-1" material="Aluminum" lvcIndicator="Constructive">
         <userData>
              <CARMA CARLAcosimulationIdentifier="JSON-ANL-1" roleName="ANL-AUTO-1" generate_bsms="true"/>
         </userData>
@@ -49,9 +59,19 @@
             <GeodeticPosition latitudeInDegrees="0.001906" longitudeInDegrees="0.000843" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
             <Heading>21.85235</Heading>
         </initialTSPI>
+    </vehicle>
+
+    <vehicle name="ANL-M-1" bsmid="f03ad636" type="vehicle.toyota.prius" owner="CARLA-ANL-1" material="Aluminum" lvcIndicator="Virtual">
+        <userData>
+             <CARMA CARLAcosimulationIdentifier="CARLA-ANL-1" roleName="ANL-M-1" generate_bsms="true"/>
+        </userData>
+        <initialTSPI>
+            <GeodeticPosition latitudeInDegrees="0.001906" longitudeInDegrees="0.000843" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
+            <Heading>21.85235</Heading>
+        </initialTSPI>
     </vehicle> 
 
-    <vehicle name="FHWA-M-3" bsmid="f03ad628" type="vehicle.toyota.prius" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="FHWA-M-3" bsmid="f03ad628" type="vehicle.toyota.prius" owner="CARLA-FHWA-3" material="Aluminum" lvcIndicator="Virtual">
         <userData>
              <CARMA CARLAcosimulationIdentifier="CARLA-FHWA-3" roleName="FHWA-M-3" generate_bsms="true"/>
         </userData>
@@ -61,7 +81,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="PITT-BG-1" bsmid="f03ad610" type="vehicle.toyota.prius" owner="JSON-PITT-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="PITT-BG-1" bsmid="f03ad610" type="vehicle.toyota.prius" owner="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive">
         <userData>
              <CARMA CARLAcosimulationIdentifier="JSON-PITT-1" roleName="PITT-BG-1" generate_bsms="true"/>
         </userData>
@@ -71,7 +91,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="PITT-BG-2" bsmid="f03ad612" type="vehicle.toyota.prius" owner="JSON-PITT-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="PITT-BG-2" bsmid="f03ad612" type="vehicle.toyota.prius" owner="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive">
         <userData>
              <CARMA CARLAcosimulationIdentifier="JSON-PITT-1" roleName="PITT-BG-2" generate_bsms="true"/>
         </userData>
@@ -81,7 +101,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="PITT-BG-3" bsmid="f03ad613" type="vehicle.toyota.prius" owner="JSON-PITT-1" material="Aluminum" lvcIndicator="Live">
+    <vehicle name="PITT-BG-3" bsmid="f03ad613" type="vehicle.toyota.prius" owner="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive">
         <userData>
              <CARMA CARLAcosimulationIdentifier="JSON-PITT-1" roleName="PITT-BG-3" generate_bsms="true"/>
         </userData>
@@ -92,6 +112,43 @@
     </vehicle>
 
   </vehicles>
+
+  <intersectionSignalControllers>
+  <!--                           this should be used as identifier -->
+    <intersectionSignalController name="DelAve_01" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+          <!--     this is spat linking, we only use ID as name isnt required  -->
+          <!--   in future, maybe we try to check for both, but just ID for now-->
+            <controller name="" id="100"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+  </intersectionSignalControllers>
+
+  <phaseSignalMappings>
+  <!-- name of config doesnt matter, match controllerName with intersectionSignalController name  -->
+    <controllerMapping name="DelAve_01 Configuration" controllerName="DelAve_01">
+
+        <trafficSignalPhase phase="2" >
+            <trafficSignalHead signalHeadID="1629"/>
+        </trafficSignalPhase>
+        <trafficSignalPhase phase="6" >
+            <trafficSignalHead signalHeadID="1629"/>
+        </trafficSignalPhase>
+        <trafficSignalPhase phase="4" >
+            <trafficSignalHead signalHeadID="1629"/>
+        </trafficSignalPhase>
+        <trafficSignalPhase phase="8" >
+            <trafficSignalHead signalHeadID="1629"/>
+        </trafficSignalPhase>
+
+    </controllerMapping>
+
+
+  </phaseSignalMappings>
 
   <simulations>
 
