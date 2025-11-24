@@ -260,7 +260,7 @@ class World(object):
         self._spectator_location = None
         self._spectator_rotation = None
         self._spectator_height = None
-        self._update_spectator()
+        #self._update_spectator()
 
         # settign up PID controller
         args_lateral = {'K_P': 1.95/2, 'K_D': 0.2/2, 'K_I': 0.075, 'dt': 0.08}
@@ -327,7 +327,7 @@ class World(object):
         return current + delta * alpha
 
     def tick(self, clock):
-        self._update_spectator()
+        #self._update_spectator()
         self.hud.tick(self, clock)
 
     def render(self, display):
@@ -1136,15 +1136,11 @@ from time import sleep
 import readline
 import pandas as pd
 from configparser import ConfigParser
-import json, threading
+import json, threading, time
 #import matplotlib.pyplot as plt
 
-# Routing use
-from agents.navigation.global_route_planner import GlobalRoutePlanner
-from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
-
 # Speed planner and low-level throttle/brake steering controller
-from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_v2
+from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_v2, determine_leader
 from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
@@ -1166,10 +1162,9 @@ update_gap = 1
 RefSpd, ref_cache = 0, 0
 speed, speed_cache = 0, 0
 x, y = 0, 0
-distance_traveled = 0
-
-cache_time, last_loop_time = 0, 0
-wp_id_cache, wp_id = 0, 0
+x1, y1 = 0, 0
+spatInfo = {}
+SPaT_flag, BSM_flag = False, False
 
 info_lock = threading.Lock()
 shutdown = threading.Event()
@@ -1179,24 +1174,26 @@ shutdown = threading.Event()
 #####################################
 
 def receive_loop():
+    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, hex_data
     try:
         # Set the UDP specs
-        UDP_IP = "10.7.108.81"
+        UDP_IP = "10.7.153.56" ##"10.7.108.81"
         UDP_PORT = 5398
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind((UDP_IP, UDP_PORT))
-
-        spatInfo = {}
-        BSM_flag = False
+        print(f"[Receive] Listening on {UDP_IP}:{UDP_PORT}")
 
         # Set a SPaT data to continue running the car
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
-        reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
 
         while True:
+            if shutdown.is_set():
+                break
+
             data, addr = sock.recvfrom(4096)
+            #print(f"[Receive] Packet received from {addr}, length: {len(data)} bytes")
             hex_data = data.hex()
             with info_lock:
                 ## first receive to get SPaT
@@ -1206,8 +1203,8 @@ def receive_loop():
                 #data, addr = sock.recvfrom(4096)
                 #hex_data = data.hex()
                 BSM_flag, x1, y1, speed = process_BSM(hex_data)
-                # if BSM_flag:
-                #     print('BSM: ', BSM_flag, x1, y1, speed)
+                if BSM_flag:
+                    print('BSM: ', BSM_flag, x1, y1, speed)
 
     except Exception as e:
         print(f"[Receive] Exception: {e}")
@@ -1221,6 +1218,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, spatInfo, spatCache
     pygame.init()
     pygame.font.init()
     world = None
@@ -1232,6 +1230,11 @@ def game_loop(args):
     pass_or_not = 0
     last_dist2bar = 1e6
     record_freq = 2
+
+    cache_time, last_loop_time = 0, 0
+    wp_id_cache, wp_id = 0, 0
+    distance_traveled = 0
+    reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
 
     df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
     cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
@@ -1257,6 +1260,9 @@ def game_loop(args):
         run_step = 0
 
         while True:
+            if shutdown.is_set():
+                break
+
             clock.tick_busy_loop(60)
             #ref_trans = world.player.get_transform()
             ref_rotation = world.player.get_transform().rotation
@@ -1274,23 +1280,23 @@ def game_loop(args):
             with info_lock:
                 if BSM_flag is True:
                     speed_cache = speed
-                elif BSM_flag is False and speed <= 0.1:
+                else:
                     speed = speed_cache
 
-            
-            ## Hardcoded UCLA vehicle as the leader
+        
+            ## Hardcoded FHWA vehicle as the leader
             for actor in actor_list:
                 #print(actor.id, actor.type_id)
                 #if actor.type_id == 'vehicle.toyota.prius':
-                if actor.attributes['role_name'] == 'UCLA-MAN-1':
+                if actor.attributes['role_name'] == 'FHWA-M-3':
                     # Use actual name
                     ref_trans1 = actor.get_transform()
                     x, y = ref_trans1.location.x, ref_trans1.location.y
                     ref_rotation = actor.get_transform().rotation
+                    speed_lead = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
                     #print(actor.attributes)
                     #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                     break
-
 
             '''
             if not BSM_flag:
@@ -1304,24 +1310,37 @@ def game_loop(args):
 
             '''
             ## Compute info for speed planning
-            x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
+            speed = speed_lead = 0
+            x_ego, y_ego, z_ego = world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
-            spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
+            spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 5
+            spacing_bsm = np.sqrt((x1-x_ego)**2 + (y1-y_ego)**2) - 5
             #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
-            dist2bar = 100 ## Just a fake value to run
+            dist2bar = 300 ## Just a fake value to run
             speed_diff = speed - speed_ego
+            carla_info = {'pos_ego': (x_ego, y_ego, z_ego), 'spacing': spacing, 'heading': world.player.get_transform().rotation.yaw, 'speed_ego': speed_ego,
+                        'pos_lead': (x, y), 'heading_lead': ref_rotation.yaw, 'speed_lead': speed_lead}
 
             this_loop_time = datetime.datetime.now().timestamp()
             distance_traveled += speed_ego * (this_loop_time - last_loop_time)
             last_loop_time = this_loop_time
 
+            print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
+            print('Carla spacing: ', spacing, ' BSM spacing: ', spacing_bsm)
+
+            # best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
+            # if best_leader:
+            #     print('Best leader from BSM: ', best_leader['bsm_id'] ,best_leader['distance'], best_leader['lead_speed'])
+
+            print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
+
             #print(dist2bar)
             
             ## Too large spacing set to nan
-            if spacing > 75 or np.isnan(speed):
-                speed = np.nan
-                spacing = np.nan
+            # if spacing > 75 or np.isnan(speed):
+            #     speed = np.nan
+            #     spacing = np.nan
 
             ## Pass intersection stop bar or not    
             if controller.eco_drive and pass_or_not == 0 and round(last_dist2bar,2) < round(dist2bar,2):
@@ -1342,10 +1361,12 @@ def game_loop(args):
                 current_update_time = datetime.datetime.now().timestamp()
                 dt = current_update_time - cache_time
 
+                #print(speed_ego, accel_ego, dist2bar, speed, spacing, pass_or_not, reference_timestamp, spatCache)
+
                 if dt >= 0.2:
                     ##if approaching intersection, use eco-algo
                     if not pass_or_not:
-                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing_bsm*3.28, reference_timestamp, spatCache)
                         print('Can get before pass!')
                     ##if passed intersection, use CF model
                     else:
@@ -1353,13 +1374,14 @@ def game_loop(args):
                         uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
                     RefSpd = min(40, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
-            except:
+            except Exception as e:
+                print(f"[Carla] Speed planning exception: {e}")
                 print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
                 RefSpd = 40
 
-            print('At time: ', reference_timestamp)
-            print(spatCache)
-            print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
+            #print('At time: ', reference_timestamp)
+            #print(spatCache)
+            #print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
             #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
             
             #print(controller.eco_drive)
@@ -1394,10 +1416,6 @@ def game_loop(args):
             #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
             #print('Ref pos: ' + str(ref_trans.location.x) + ', ' + str(ref_trans.location.y))
 
-            world.tick(clock)
-            world.render(display)
-            pygame.display.flip()
-
             if run_step%record_freq == 0:
                 last_dist2bar = dist2bar
 
@@ -1406,8 +1424,14 @@ def game_loop(args):
 
             #draw_box(world.world, x1, y1, 240)
 
-    finally:
+            world.tick(clock)
+            world.render(display)
+            pygame.display.flip()
 
+    
+    except Exception as e:
+        print(f"[Carla] Exception: {e}")
+    finally:
         #np.save('./JHDEBUG.npy', Data4JH)
 
         if (world and world.recording_enabled):
@@ -1417,6 +1441,8 @@ def game_loop(args):
             world.destroy()
 
         pygame.quit()
+        print("[Carla] Stopped")
+
         '''
         plt.figure()
         plt.plot(ego_speed_buffer)
@@ -1494,6 +1520,10 @@ def main():
 
     thread_recv = threading.Thread(target=receive_loop, daemon=True)
     thread_carla = threading.Thread(target=game_loop, args=(args,), daemon=True)
+
+    thread_recv.start()
+    time.sleep(1.0)
+    thread_carla.start()
 
     try:
         while thread_recv.is_alive() and thread_carla.is_alive():

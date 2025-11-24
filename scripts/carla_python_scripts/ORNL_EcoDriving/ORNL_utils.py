@@ -13,6 +13,8 @@ import math, sys
 import numpy as np
 
 from find_carla_egg import find_carla_egg
+from gps2carla import gps_to_carla, GpsOrigin, CarlaTransform
+from mapOffset import GpsCarlaPair, calibrate_enu_to_carla
 
 carla_egg_file = find_carla_egg()
 
@@ -20,11 +22,30 @@ sys.path.append(carla_egg_file)
 
 import carla
 
+origin = GpsOrigin(
+        lat_deg=36.123456,   # example
+        lon_deg=-86.987654,  # example
+        h_m=200.0            # meters (ellipsoidal height)
+    )
+
+carla_tf = CarlaTransform(
+    yaw_offset_deg=30.0,   # ENU East -> CARLA X rotation
+    offset_x=0.0,          # ENU origin coincides with CARLA (0,0,0)
+    offset_y=0.0,
+    offset_z=0.0
+)
+
 mcity_origin = { 
-                "x": 518508.658, 
-                "y": -4696054.02, 
-                "z": 0
+                "x": 6378136.5, 
+                "y": 857.6, 
+                "z": 935.9
             }
+
+delave_origin = GpsOrigin(
+    lat_deg=0.00841723681631434,
+    lon_deg=0.00773563408642701,
+    h_m=0,
+)
 barPos_x, barPos_y = 53.33, -23.77
 
 draw_lifetime = 1/60
@@ -162,29 +183,31 @@ def process_BSM(hex_data):
         decoded_msg.from_uper(ba.unhexlify(hex_data))
         # decoded_bsm = decoded_msg.to_json()
         decoded_bsm = decoded_msg()
-        print(decoded_bsm)
+        #print("Decoded BSM: ")
+        #print(str(decoded_msg.to_json()) + "\n")
 
         bsmId = decoded_bsm['value'][1]['coreData']['id']
         decoded_bsm['value'][1]['coreData']['id'] = str(bsmId.hex())
-        if decoded_bsm['value'][1]['coreData']['id'] == "f03ad620":
-        #if decoded_bsm['value'][1]['coreData']['id'] == "f03ad627":
-            #print("Received BSM")
-            lat= decoded_bsm['value'][1]['coreData']['lat']
-            longstr = decoded_bsm['value'][1]['coreData']['long']
-            speed = decoded_bsm['value'][1]['coreData']['speed']
-            elevation = decoded_bsm['value'][1]['coreData']['elev']
-            secMark = decoded_bsm['value'][1]['coreData']['secMark']
-            heading = decoded_bsm['value'][1]['coreData']['heading']
-            speed_converted = speed*0.02 #m/s
-            accel_long = decoded_bsm['value'][1]['coreData']['accelSet']['long']
-            accel_long_converted = accel_long*0.01 #m^s^2
+        #print("Received BSM")
+        lat= decoded_bsm['value'][1]['coreData']['lat']
+        longstr = decoded_bsm['value'][1]['coreData']['long']
+        speed = decoded_bsm['value'][1]['coreData']['speed']
+        elevation = decoded_bsm['value'][1]['coreData']['elev']
+        secMark = decoded_bsm['value'][1]['coreData']['secMark']
+        heading = decoded_bsm['value'][1]['coreData']['heading']
+        speed_converted = speed*0.02 #m/s
+        accel_long = decoded_bsm['value'][1]['coreData']['accelSet']['long']
+        accel_long_converted = accel_long*0.01 #m^s^2
 
-            xyz = GeodeticToEcef(lat/10**7, longstr/10**7, elevation/10)
-            #xyz = lat_long_to_xyz_better(lat/10**7, longstr/10**7, 0)
-            x, y = xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
+        xyz = GeodeticToEcef(lat/10**7, longstr/10**7, 0)
+        #xyz = lat_long_to_xyz_better(lat/1e7, longstr/1e7, 0)
+        
+        #x, y = xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
+        x, y, z = xyz['y'], xyz['x'], xyz['z']
 
+        #if decoded_bsm['value'][1]['coreData']['id'] == "f03ad620":
+        if decoded_bsm['value'][1]['coreData']['id'] == "f03ad628":
             #print('BSM position: ', lat, longstr, elevation)
-
             '''
             xyz1 = GeodeticToEcef(lat, longstr, elevation)
             xyz2 = lat_long_to_xyz_better(lat, longstr, elevation)
@@ -198,6 +221,9 @@ def process_BSM(hex_data):
             print('MCity origin: ', mcity_origin['x'], mcity_origin['y'])
             '''
             return True, x, y, speed_converted
+        elif decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
+            print('Ego BSM Coordinate: ', x, y, z)
+
     return False, 0, 0, 0
 
 def decode_map(hex_data):
@@ -820,7 +846,9 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
 
     return None
 
-def determine_leader(ego_location, bsm_message=None, ego_heading=None, max_search_distance=100.0):
+gpsPairs = []
+
+def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_info = None, max_search_distance=100.0):
     """Return the lead vehicle BSM that is closest to the ego vehicle position and travel direction.
 
     Parameters
@@ -862,17 +890,17 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, max_searc
             return None
         if isinstance(payload, dict):
             return payload
-        if isinstance(payload, str):
-            stripped = payload.strip().lower()
-            if stripped.startswith('0x'):
-                stripped = stripped[2:]
-            try:
-                return json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                pass
+
+        try:
+            return json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        #stripped = payload.strip().lower()
+        if payload.startswith("0014"):
+            #stripped = stripped[2:]
             try:
                 decoded = J2735.DSRC.MessageFrame
-                decoded.from_uper(ba.unhexlify(stripped))
+                decoded.from_uper(ba.unhexlify(payload))
                 return decoded()
             except Exception:
                 return None
@@ -884,15 +912,17 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, max_searc
         _cached_bsm_state['timestamp'] = time.time()
     else:
         decoded_bsm = _cached_bsm_state['decoded_bsm']
+    
     ego_xy = _location_to_xy(ego_location)
     heading_vec = _heading_vector(ego_location, ego_heading)  # Implement heading vector calculation similar to MAP processing
+    
     if decoded_bsm is None or ego_xy is None:
         if _cached_bsm_state['last_leader'] is not None:
             stale = dict(_cached_bsm_state['last_leader'])
             stale['stale'] = True
             return stale
         return None
-    bsm_body = decoded_bsm.get('value') if isinstance(decoded_bsm, dict) else None
+    bsm_body = decoded_bsm.get('value')[1] if isinstance(decoded_bsm, dict) else None
     if not isinstance(bsm_body, dict):
         if _cached_bsm_state['last_leader'] is not None:
             stale = dict(_cached_bsm_state['last_leader'])
@@ -903,16 +933,37 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, max_searc
     ## 2. Implement logic to find lead vehicles based on ego position and heading
     core_data = bsm_body.get('coreData', {})
     if core_data:
-        bsm_id = core_data.get('id')
+        bsm_id = str(core_data.get('id').hex())
+        #print("Processing BSM ID:", bsm_id)
         lat, lon, elev = core_data.get('lat'), core_data.get('long'), core_data.get('elev')  # Extract from core_data
-        bsm_xy = _latlon_to_local_xy(lat, long, elev)  # Convert lat/lon to local XY
-        bsm_heading = core_data.get('heading')  # Extract heading
+        bsm_xy = _latlon_to_local_xy(lat/1e7, lon/1e7, elev/10)  # Convert lat/lon to local XY
+        bsm_heading = core_data.get('heading') * 0.0125  # Extract heading
+        bsm_speed = core_data.get('speed') * 0.02  # Extract speed in m/s
         _cached_vehicles[bsm_id] = {
             'position': bsm_xy,
             'heading': bsm_heading,
+            'speed': bsm_speed,
             'timestamp': time.time()
         }
+        ## debug use, use ego BSM to set ego position
+        ego_xy = _cached_vehicles['f03ad658']['position'] if 'f03ad658' in _cached_vehicles.keys() else ego_xy
+        ego_heading = _cached_vehicles['f03ad658']['heading'] if 'f03ad658' in _cached_vehicles.keys() else ego_heading
+        heading_vec = _heading_vector(ego_location, ego_heading)
+        # if bsm_id == 'f03ad658':
+        #     gpsPairs.append(GpsCarlaPair(lat/1e7, lon/1e7, elev/10,  carla_info['pos_ego'][0],  carla_info['pos_ego'][1], carla_info['pos_ego'][2]))
 
+        #     if len(gpsPairs) > 100:
+        #         gpsPairs.pop(0)
+        #     if len(gpsPairs) > 2:
+        #         tf = calibrate_enu_to_carla(gpsPairs, delave_origin)
+        #         print("Calibrated transform:")
+        #         print(f"  yaw_offset_deg = {tf.yaw_offset_deg:.6f}")
+        #         print(f"  offset_x       = {tf.offset_x:.6f} m")
+        #         print(f"  offset_y       = {tf.offset_y:.6f} m")
+        #         print(f"  offset_z       = {tf.offset_z:.6f} m")
+
+    #print('BSM_INFO: ', _cached_vehicles)
+    #print('CARLA INFO: ', carla_info)
     if not _cached_vehicles:
         if _cached_bsm_state['last_leader'] is not None:
             stale = dict(_cached_bsm_state['last_leader'])
@@ -931,11 +982,13 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, max_searc
         if dist_to_vehicle < 1.0:
             continue
         if heading_vec is not None:
+            #print("Heading Vec:", heading_vec, "heading angle: ", ego_heading)
             forward_component = np.dot(vec_to_vehicle, heading_vec)
             if forward_component <= 0:
                 continue
         candidate_list.append((vehicle, dist_to_vehicle, vehicle_speed, vehicle_heading))
 
+    print("Candidate lead vehicles found:", len(candidate_list))
     if not candidate_list:
         if _cached_bsm_state['last_leader'] is not None:
             stale = dict(_cached_bsm_state['last_leader'])

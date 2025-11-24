@@ -260,7 +260,7 @@ class World(object):
         self._spectator_location = None
         self._spectator_rotation = None
         self._spectator_height = None
-        self._update_spectator()
+        #self._update_spectator()
 
         # settign up PID controller
         args_lateral = {'K_P': 1.95/2, 'K_D': 0.2/2, 'K_I': 0.075, 'dt': 0.08}
@@ -327,7 +327,7 @@ class World(object):
         return current + delta * alpha
 
     def tick(self, clock):
-        self._update_spectator()
+        #self._update_spectator()
         self.hud.tick(self, clock)
 
     def render(self, display):
@@ -1140,11 +1140,11 @@ import json
 #import matplotlib.pyplot as plt
 
 # Routing use
-from agents.navigation.global_route_planner import GlobalRoutePlanner
-from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
+#from agents.navigation.global_route_planner import GlobalRoutePlanner
+#from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 
 # Speed planner and low-level throttle/brake steering controller
-from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_v2
+from ORNL_utils import draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, search_target_index, search_target_index_v2, determine_leader
 from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
@@ -1172,8 +1172,9 @@ def game_loop(args):
 
     Data4JH = []
 
+    dist2bar = 1e3
     pass_or_not = 0
-    last_dist2bar = 1e6
+    last_dist2bar = 1e3
     record_freq = 2
 
     df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
@@ -1191,11 +1192,13 @@ def game_loop(args):
             pygame.HWSURFACE | pygame.DOUBLEBUF)
 
         # Set the UDP specs
-        UDP_IP = "10.7.108.81"
+        UDP_IP = "10.7.153.56"
         UDP_PORT = 5398
 
-        #sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        #sock.bind((UDP_IP, UDP_PORT))
+        print("Listening on UDP port:", UDP_PORT)
+
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind((UDP_IP, UDP_PORT))
 
         # Set up the world client and vehicle low-level controller
         hud = HUD(args.width, args.height)
@@ -1247,11 +1250,11 @@ def game_loop(args):
                     ref_trans = actor.get_transform()
             '''
             ## second receive to get BSM
-            '''
+            
             data, addr = sock.recvfrom(4096) # buffer size is 1024 bytes
+            print("Received message with length", len(data))
             hex_data = data.hex()
-            BSM_flag, x1, y1, speed = process_BSM(hex_data)
-            '''
+            # BSM_flag, x1, y1, speed = process_BSM(hex_data)    
 
             if BSM_flag is True:
                 speed_cache = speed
@@ -1265,11 +1268,12 @@ def game_loop(args):
             for actor in actor_list:
                 #print(actor.id, actor.type_id)
                 #if actor.type_id == 'vehicle.toyota.prius':
-                if actor.attributes['role_name'] == 'UCLA-MAN-1':
+                if actor.attributes['role_name'] == 'FHWA-M-3':
                     # Use actual name
                     ref_trans1 = actor.get_transform()
                     x, y = ref_trans1.location.x, ref_trans1.location.y
                     ref_rotation = actor.get_transform().rotation
+                    speed_lead = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
                     #print(actor.attributes)
                     #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
                     break
@@ -1290,12 +1294,20 @@ def game_loop(args):
 
             '''
             ## Compute info for speed planning
+            speed = speed_lead
             x_ego, y_ego = world.player.get_transform().location.x, world.player.get_transform().location.y
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
             spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 4.5
-            dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
+            #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
             speed_diff = speed - speed_ego
+            carla_info = {'pos_ego': (x_ego, y_ego), 'spacing': spacing, 'heading': world.player.get_transform().rotation.yaw, 'speed_ego': speed_ego,
+                        'pos_lead': (x, y), 'heading_lead': ref_rotation.yaw, 'speed_lead': speed_lead}
+            print(f'Carla distance: {spacing}, Carla heading: {world.player.get_transform().rotation.yaw}')
+
+            best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
+            if best_leader:
+                print('Best leader from BSM: ', best_leader['bsm_id'] ,best_leader['distance'], best_leader['lead_speed'])
 
             this_loop_time = datetime.datetime.now().timestamp()
             distance_traveled += speed_ego * (this_loop_time - last_loop_time)
@@ -1327,6 +1339,8 @@ def game_loop(args):
                 current_update_time = datetime.datetime.now().timestamp()
                 dt = current_update_time - cache_time
 
+                #print(speed_ego, accel_ego, dist2bar, speed, spacing, pass_or_not, reference_timestamp, spatCache)
+
                 if dt >= 0.2:
                     ##if approaching intersection, use eco-algo
                     if not pass_or_not:
@@ -1338,13 +1352,14 @@ def game_loop(args):
                         uselessOutput, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
                     RefSpd = min(40, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
-            except:
+            except Exception as e:
+                print(e)
                 print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
                 RefSpd = 40
 
-            print('At time: ', reference_timestamp)
-            print(spatCache)
-            print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
+            #print('At time: ', reference_timestamp)
+            #print(spatCache)
+            #print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
             #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
             
             #print(controller.eco_drive)

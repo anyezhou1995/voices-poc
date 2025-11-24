@@ -202,7 +202,7 @@ try:
             }
     
     draw_world_axes(world, life_time=30)
-    follow_vehicle_axes(world, role_name="FHWA-JSON-3", length=8.0, life_time=0.1)
+    follow_vehicle_axes(world, role_name="FHWA-M-3", length=8.0, life_time=0.1)
 
 finally:
     print('\nDone!')
