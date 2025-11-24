@@ -1,13 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+from argparse import RawTextHelpFormatter
 import random
 import sys
-import os
-import math
 
 import pygame  # for keyboard input
-import importlib.util
 
 from find_carla_egg import find_carla_egg
 
@@ -16,54 +14,11 @@ from find_carla_egg import find_carla_egg
 # -------------------------------------------------------------------------
 
 carla_egg_file = find_carla_egg()
-print(f"Found carla egg(s): {carla_egg_file}")
 
 # Add egg so `import carla` works
 sys.path.append(carla_egg_file)
 
-# Get /home/.../CARLA/PythonAPI from egg path
-# carla_pythonapi_root = os.path.dirname(os.path.dirname(os.path.dirname(carla_egg_file)))
-# print(f"Using CARLA PythonAPI root: {carla_pythonapi_root}")
-
-# Add PythonAPI root so we can load agent sources from there
-# sys.path.append(carla_pythonapi_root)
-
 import carla
-
-# -------------------------------------------------------------------------
-# Load BehaviorAgent directly from its file path
-# -------------------------------------------------------------------------
-
-def load_behavior_agent_class():
-    # Try both common layouts:
-    candidates = [
-        os.path.join(carla_pythonapi_root, "agents", "navigation", "behavior_agent.py"),
-        os.path.join(carla_pythonapi_root, "carla", "agents", "navigation", "behavior_agent.py"),
-    ]
-
-    behavior_agent_path = None
-    for path in candidates:
-        if os.path.isfile(path):
-            behavior_agent_path = path
-            break
-
-    if behavior_agent_path is None:
-        raise RuntimeError(
-            "Could not find behavior_agent.py under PythonAPI. "
-            f"Tried: {candidates}"
-        )
-
-    print(f"Loading BehaviorAgent from: {behavior_agent_path}")
-
-    spec = importlib.util.spec_from_file_location(
-        "carla_behavior_agent", behavior_agent_path
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.BehaviorAgent
-
-
-# BehaviorAgent = load_behavior_agent_class()
 
 from agents.navigation.behavior_agent import BehaviorAgent
 
@@ -74,68 +29,84 @@ from agents.navigation.behavior_agent import BehaviorAgent
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description='CARLA manual vehicle with optional route-based autopilot'
+        formatter_class=RawTextHelpFormatter, description=(
+            "Drive a CARLA vehicle with a route-based autopilot (destination required).\n\n"
+            "How to run inside the distributed-testing container:\n"
+            "  1) Enter the container: dt exec\n"
+            "  2) Change to the script folder: cd ~/distributed-testing/scripts/carla_python_scripts\n"
+            "  3) Run with your options: ./drive_route.py [args]\n\n"
+            "Examples:\n"
+            "  - Attach to an existing vehicle (role_name \"FHWA-M-1\") and start route:\n"
+            "      ./drive_route.py --attach_vehicle FHWA-M-1 --dest 80.0 -10.0 1.0\n"
+            "  - Spawn a new vehicle at a fixed pose and start route:\n"
+            "      ./drive_route.py --x 12.5 --y -45.0 --z 1.0 --yaw 90 --dest 80.0 -10.0 1.0\n\n"
+            "Keyboard controls:\n"
+            "  - SPACE: stop/resume target speed\n"
+            "  - UP / DOWN: increase/decrease target speed by 5 kph\n"
+            "  - E: toggle manual speed limiting (adheres to map speed limit when off)\n"
+            "  - T: toggle train mode (agent steers; you handle throttle/brake)\n"
+            "  - W / S: throttle/brake when train mode is ON"
+        )
     )
-    parser.add_argument(
-        '-v', '--verbose',
-        action='store_true',
-        dest='debug',
-        help='print debug information')
-    parser.add_argument(
-        '--host',
-        metavar='H',
-        default='127.0.0.1',
-        help='IP of the host server (default: 127.0.0.1)')
-    parser.add_argument(
-        '-p', '--port',
-        metavar='P',
-        default=2000,
-        type=int,
-        help='TCP port to listen to (default: 2000)')
-    parser.add_argument(
-        '--filter',
-        metavar='PATTERN',
-        default='vehicle.*',
-        help='actor filter (default: "vehicle.*")')
-    parser.add_argument(
-        '--rolename',
-        metavar='NAME',
-        default='hero',
-        help='actor role name for spawned vehicle (default: "hero")')
-    parser.add_argument(
-        '--follow_vehicle',
-        default="TFHRC-MANUAL-1",
-        help='Vehicle role_name to use if it already exists in the world')
-    parser.add_argument(
-        '-s', '--speed_limit',
-        metavar='S',
-        default=50,
-        type=int,
-        help='Speed limit for vehicle in kph (default: 50 kph)')
-    parser.add_argument(
-        '--x', type=float,
-        help='x coordinate of the spawn point in CARLA left handed coordinate system')
-    parser.add_argument(
-        '--y', type=float,
-        help='y coordinate of the spawn point in CARLA left handed coordinate system')
-    parser.add_argument(
-        '--z', type=float,
-        help='z coordinate of the spawn point in CARLA left handed coordinate system')
-    parser.add_argument(
-        '--roll', type=float, default=0.0,
-        help='roll angle in degrees (CARLA left handed coordinate system)')
-    parser.add_argument(
-        '--pitch', type=float, default=0.0,
-        help='pitch angle in degrees (CARLA left handed coordinate system)')
-    parser.add_argument(
-        '--yaw', type=float, default=0.0,
-        help='yaw angle in degrees (CARLA left handed coordinate system)')
     parser.add_argument(
         '--dest',
         metavar=('DX', 'DY', 'DZ'),
         type=float,
         nargs=3,
-        help='Destination coordinate for route autopilot (DX DY DZ)')
+        required=True,
+        help='Destination XYZ for route autopilot (three values required)')
+    parser.add_argument(
+        '-v', '--verbose',
+        action='store_true',
+        dest='debug',
+        help='Print debug details about CARLA world, vehicle selection, and agent setup')
+    parser.add_argument(
+        '--host',
+        metavar='H',
+        default='127.0.0.1',
+        help='IP/hostname of the CARLA server reachable from inside the container (default: 127.0.0.1)')
+    parser.add_argument(
+        '-p', '--port',
+        metavar='P',
+        default=2000,
+        type=int,
+        help='TCP port for CARLA server RPC (default: 2000)')
+    parser.add_argument(
+        '--filter',
+        metavar='PATTERN',
+        default='vehicle.*',
+        help='Blueprint filter for spawned vehicles (default: "vehicle.*")')
+    parser.add_argument(
+        '--rolename',
+        metavar='NAME',
+        default='hero',
+        help='role_name attribute assigned to spawned vehicle (default: "hero")')
+    parser.add_argument(
+        '--attach_vehicle',
+        help='Attach to an existing vehicle with this role_name; exits if not found')
+    parser.add_argument(
+        '-s', '--speed_limit',
+        default=30,
+        type=int,
+        help='Initial target speed in kph for autopilot or manual step changes (default: 30)')
+    parser.add_argument(
+        '--x', type=float,
+        help='X coordinate for spawn in CARLA left-handed map coordinates (use with --y and --z)')
+    parser.add_argument(
+        '--y', type=float,
+        help='Y coordinate for spawn in CARLA left-handed map coordinates (use with --x and --z)')
+    parser.add_argument(
+        '--z', type=float,
+        help='Z coordinate for spawn in CARLA left-handed map coordinates (use with --x and --y)')
+    parser.add_argument(
+        '--roll', type=float, default=0.0,
+        help='Roll angle in degrees for spawn transform (default: 0.0)')
+    parser.add_argument(
+        '--pitch', type=float, default=0.0,
+        help='Pitch angle in degrees for spawn transform (default: 0.0)')
+    parser.add_argument(
+        '--yaw', type=float, default=0.0,
+        help='Yaw angle in degrees for spawn transform; set heading when providing XYZ (default: 0.0)')
     return parser.parse_args()
 
 
@@ -195,10 +166,14 @@ def spawn_vehicle(world, carla_map, args):
 
 def setup_vehicle(world, carla_map, args):
     # Try existing vehicle first
-    vehicle = find_existing_vehicle(world, args.follow_vehicle)
-    if vehicle is None:
-        print(f">>> No vehicle with role_name={args.follow_vehicle} found, spawning a new one")
+    if not args.attach_vehicle: 
         vehicle = spawn_vehicle(world, carla_map, args)
+    else:
+        vehicle = find_existing_vehicle(world, args.attach_vehicle)
+    
+        if vehicle is None:
+            print(f">>> No vehicle with role_name={args.attach_vehicle} found")
+            sys.exit()
 
     # Make sure Traffic Manager autopilot is OFF – we are using BehaviorAgent
     vehicle.set_autopilot(False)
@@ -222,7 +197,7 @@ def setup_agent(vehicle, args):
         agent.set_target_speed(float(args.speed_limit))
         autopilot_active = True
     else:
-        print(">>> No destination provided; route autopilot inactive, manual control expected.")
+        print(">>> No destination provided")
 
     return agent, autopilot_active
 
@@ -234,7 +209,9 @@ def setup_agent(vehicle, args):
 def run_loop(world, vehicle, agent, autopilot_active, args):
     # Pygame setup for keyboard events
     pygame.init()
-    screen = pygame.display.set_mode((200, 200))  # tiny window just to grab focus
+    screen_width = 230
+    screen_height = 350
+    screen = pygame.display.set_mode((screen_width, screen_height))  # tiny window just to grab focus
     pygame.display.set_caption("Control Window")
 
     font = pygame.font.SysFont(None, 24, bold=True)
@@ -364,24 +341,40 @@ def run_loop(world, vehicle, agent, autopilot_active, args):
             title2 = font.render("TO CONTROL", True, (255, 0, 0))
 
             # Dynamic status text
-            manual_text = f"Manual: {'ON' if manual_speed_limit_enabled else 'OFF'}"
+            manual_text = f"Manual [E]: {'ON' if manual_speed_limit_enabled else 'OFF'}"
             if manual_speed_value is None:
                 speed_text = "Speed: AUTO"
             else:
                 speed_text = f"Speed: {manual_speed_value:.1f} kph"
+            speed_increase_text = f"Increase Speed [UP]"
+            speed_decrease_text = f"Decrease Speed [DOWN]"
+            stop_text = f"Stop [SPACE]"
+            train_text = f"Train [T]: {'ON' if train_mode else 'OFF'}"
+            train_throttle_text = f"Train Throttle [W]"
+            train_brake_text = f"Train Breke [S]"
+            
 
-            train_text = f"Train: {'ON' if train_mode else 'OFF'}"
-
-            status1 = font.render(manual_text, True, (255, 255, 255))
-            status2 = font.render(speed_text, True, (255, 255, 255))
-            status3 = font.render(train_text, True, (255, 255, 0))
+            
+            status1 = font.render(speed_text, True, (0, 255, 0))
+            status2 = font.render(speed_increase_text, True, (255, 255, 255))
+            status3 = font.render(speed_decrease_text, True, (255, 255, 255))
+            status4 = font.render(stop_text, True, (255, 255, 255))
+            status5 = font.render(manual_text, True, (255, 255, 255))
+            status6 = font.render(train_text, True, (255, 255, 0))
+            status7 = font.render(train_throttle_text, True, (255, 255, 0))
+            status8 = font.render(train_brake_text, True, (255, 255, 0))
 
             # Positioning
-            rect_title1 = title1.get_rect(center=(100, 30))
-            rect_title2 = title2.get_rect(center=(100, 60))
-            rect_status1 = status1.get_rect(center=(100, 110))
-            rect_status2 = status2.get_rect(center=(100, 140))
-            rect_status3 = status3.get_rect(center=(100, 170))
+            rect_title1 = title1.get_rect(center=(screen_width/2, 30))
+            rect_title2 = title2.get_rect(center=(screen_width/2, 60))
+            rect_status1 = status1.get_rect(center=(screen_width/2, 110))
+            rect_status2 = status2.get_rect(center=(screen_width/2, 140))
+            rect_status3 = status3.get_rect(center=(screen_width/2, 170))
+            rect_status4 = status4.get_rect(center=(screen_width/2, 200))
+            rect_status5 = status5.get_rect(center=(screen_width/2, 230))
+            rect_status6 = status6.get_rect(center=(screen_width/2, 260))
+            rect_status7 = status7.get_rect(center=(screen_width/2, 290))
+            rect_status8 = status8.get_rect(center=(screen_width/2, 320))
 
             # Blit and flip
             screen.blit(title1, rect_title1)
@@ -389,6 +382,11 @@ def run_loop(world, vehicle, agent, autopilot_active, args):
             screen.blit(status1, rect_status1)
             screen.blit(status2, rect_status2)
             screen.blit(status3, rect_status3)
+            screen.blit(status4, rect_status4)
+            screen.blit(status5, rect_status5)
+            screen.blit(status6, rect_status6)
+            screen.blit(status7, rect_status7)
+            screen.blit(status8, rect_status8)
             pygame.display.flip()
 
     finally:

@@ -320,10 +320,14 @@ dt__download() {
         return 1
     fi
 
-    COMPOSE_FILE="$VUG_LOCAL_DT_PATH/docker/docker-compose.yml"
+    if [[ $VUG_DOCKER_START_CARLA == 'local' ]]; then 
+        COMPOSE_FILE="$VUG_LOCAL_DT_PATH/docker/docker-compose.yml"
+    else
+        COMPOSE_FILE="$VUG_LOCAL_DT_PATH/docker/no-carla_docker-compose.yml"
+    fi
 
     if [[ ! -f "$COMPOSE_FILE" ]]; then
-        echo "Error: Cannot find docker-compose.yml at $COMPOSE_FILE"
+        echo "Error: Cannot find docker compose file at $COMPOSE_FILE"
         return 1
     fi
 

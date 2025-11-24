@@ -121,7 +121,7 @@
           <controllers>
           <!--     this is spat linking, we only use ID as name isnt required  -->
           <!--   in future, maybe we try to check for both, but just ID for now-->
-            <controller name="" id="100"/>
+            <controller name="" id="1"/>
           </controllers>      
         </CARLA>
       </userData>
@@ -130,23 +130,23 @@
 
   <phaseSignalMappings>
   <!-- name of config doesnt matter, match controllerName with intersectionSignalController name  -->
-    <controllerMapping name="DelAve_01 Configuration" controllerName="DelAve_01">
-
-        <trafficSignalPhase phase="2" >
-            <trafficSignalHead signalHeadID="1629"/>
-        </trafficSignalPhase>
-        <trafficSignalPhase phase="6" >
-            <trafficSignalHead signalHeadID="1629"/>
-        </trafficSignalPhase>
-        <trafficSignalPhase phase="4" >
-            <trafficSignalHead signalHeadID="1629"/>
-        </trafficSignalPhase>
-        <trafficSignalPhase phase="8" >
-            <trafficSignalHead signalHeadID="1629"/>
-        </trafficSignalPhase>
-
-    </controllerMapping>
-
+    <configuration name="DelAve_01 Configuration" controllerName="DelAve_01">
+      <controller name="" id="">
+        <control signalId="102" type=""> <!-- SB, Actor 135 -->
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="100" type=""> <!-- NB, Actor 122 -->
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="101" type=""> <!-- WB, Actor 124 -->
+          <userData><phase>8</phase></userData>
+        </control>
+      </controller>
+    </configuration>
 
   </phaseSignalMappings>
 
@@ -168,6 +168,10 @@
       <WeatherState>ClearNoon</WeatherState>
     </simulation>
 
+    <simulation name="CARLA-SWRI-1" type="CARLA">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
     <simulation name="JSON-SWRI-1" type="JSON">
       <WeatherState>ClearNoon</WeatherState>
     </simulation>
@@ -177,6 +181,10 @@
     </simulation>
 
     <simulation name="JSON-ANL-1" type="JSON">
+      <WeatherState>ClearNoon</WeatherState>
+    </simulation>
+
+    <simulation name="CARLA-ANL-1" type="CARLA">
       <WeatherState>ClearNoon</WeatherState>
     </simulation>
 

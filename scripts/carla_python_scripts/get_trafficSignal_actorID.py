@@ -58,16 +58,19 @@ try:
                     # print(str(actorid_search_result))
                     signid_list[actorid_search_result] = signid_search_result
 
-        print("{Actor ID : SignID ...}: " + str(signid_list))
+        print("Actor ID to SignID List" + str(signid_list))
         
         for index, light in enumerate(traffic_light_list, start=1):
-            print(f'{light.id} ({signid_list[str(light.id)]})')
-            world.debug.draw_string(
-                light.get_location(), 
-                f'Actor: {light.id}, sign_id: {signid_list[str(light.id)]}', 
-                draw_shadow=False,
-                color=carla.Color(r=255, g=0, b=0), life_time=200,
-                persistent_lines=True)
+            if str(light.id) in signid_list:
+                print(f'Actor ID: {light.id} | SignID {signid_list[str(light.id)]}')
+                world.debug.draw_string(
+                    light.get_location(), 
+                    f'Actor: {light.id}, sign_id: {signid_list[str(light.id)]}', 
+                    draw_shadow=False,
+                    color=carla.Color(r=255, g=0, b=0), life_time=200,
+                    persistent_lines=True)
+            else:
+                print(f"No signId found for actor id {light.id}")
     else:
 
 

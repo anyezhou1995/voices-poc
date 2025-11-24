@@ -398,117 +398,25 @@ build_container_exists=false
 
 if [[ -n $currentDockerImages ]] ; then
 	echo
-	echo "Found build docker container: $dockerContainer"
-	build_container_exists=true
-else
-	echo
-	echo "Build docker container $dockerContainer not found, building"
-fi
-
-
-# if the build container doesnt exist, build it
-# if it does exist:
-#		and no rebuild is set to true, then dont rebuild
-#		and no rebuild is not set, then prompt to rebuild
-if [[ $build_container_exists == true ]]; then
-
-	if [[ $arg_no_docker_rebuild == true ]]; then
-		rebuild_docker=false
-
-	else
-	
-		echo
-		echo "Build container $dockerContainer already exists, would you like to rebuild? [y/n] "
-		echo 
-		echo "[!!!] WARNING: THIS WILL DESTROY THE EXISTING BUILD CONTAINER AND REBUILD FROM SCRATCH"
-		echo "                               THIS PROCESS CAN TAKE OVER 1 HOUR"
-		echo
-		read -p "    [y/n] --> " rebuildContainerYn
-
-		if [[ $rebuildContainerYn =~ ^[yY]$ ]]; then
-			echo
-			read -p "    Are you sure you want to rebuild the docker container? [y/n] " rebuildContainerYnConfirm
-			if [[ $rebuildContainerYnConfirm =~ ^[yY]$ ]]; then
-				rebuild_docker=true
-			else
-				rebuild_docker=false
-			fi
-		else
-			rebuild_docker=false
-		fi
-	fi
+	echo "Found build docker container: $dockerContainer, pulling the latest version"
+	docker pull $dockerContainer
 
 else
-	rebuild_docker=true
-
-fi
-
-if [[ $rebuild_docker == false ]]; then
 	echo
-	echo "#### Skipping Docker Container Build ####"
-else
-	echo
-	echo "#### Docker Container Build ####"
-	
-	if [ $build_container_exists == true ]; then
-		echo "Removing old build containers"
-		sudo docker rm -v $dockerContainer 
-		sudo docker image rm -f $dockerContainer
-	fi
-	
-	#if v2xhub plugin need to build image inside the V2X-Hub dir
-	if $isV2xhubPlugin; then
+	echo "Build docker container $dockerContainer not found, pulling"
+	docker pull $dockerContainer
 
-		docker pull $dockerContainer
-	
-
-	#if we are the carla adapter
-	elif [ $dockerContainer == "harbor.distributedtesting.org/distributed-testing/dt-build-carla:latest" ]; then
-		
-		if [ ! -d $VUG_LOCAL_TENADEV_DIR/$vug_carla_adapter_name ]; then
-			echo "This application uses the harbor.distributedtesting.org/distributed-testing/dt-build-carla:latest build container from the $vug_carla_adapter_name. Cloning $vug_carla_adapter_name repository to use dockerfile"
-		
-			git clone $carlaTenaAdapterGitUrl -b develop $VUG_LOCAL_TENADEV_DIR/$vug_carla_adapter_name || exit
-
-		fi
-
-		dockerfileToUse=$VUG_LOCAL_TENADEV_DIR/$vug_carla_adapter_name/docker/Dockerfile
-
-	elif [ $dockerContainer == "$buildGeneralImage" ]; then
-
-		dockerfileToUse=$localDTDir/scripts/build_tena_adapters/tena-general-dockerfile
-	
-	fi
-
-	echo
-	read -p "Would you like to use cached dockerfile steps? [y/n] " useDockerfileCache
-
-	if [[ $useDockerfileCache =~ ^[yY]$ ]]; then
-
-		dockerfileCacheArg=""
-
-	else
-	
-		dockerfileCacheArg="--no-cache"
-		
-	fi
-
-	echo
-	echo "#### Starting Docker Build ####"
-	sudo -E docker build $dockerfileCacheArg --force-rm --rm -f $dockerfileToUse -t $dockerContainer .
-			
+	# verify it exists now
 	currentDockerImages=$(sudo docker image list -q $dockerContainer)
 
-	if [[ -z $currentDockerImages ]]; then
-		echo
-		echo "[!!!] Container $dockerContainer not built, check logs for details..."
-		exit
+	if [[ -n $currentDockerImages ]] ; then
+		echo "Build container successfully downloaded"
+	else
+		echo "[!!!] Unable to download build container"
+		exit 1
 	fi
 
-	echo "#### Docker Build Complete ####"
-		
 fi
-
 
 #-- Cmake example
 #sudo docker run --rm -v /home/ejslattery/dev/carlaadapter:/home/CarlaAdapter -v /home/ejslattery/dev/tenadev/u1804-gcc75-64/TENA:/home/TENA harbor.distributedtesting.org/distributed-testing/dt-build-carla:latest bash -c "cd /home/CarlaAdapter/build; export TENA_PLATFORM=u1804-gcc75-64; export TENA_HOME=/home/TENA; export TENA_VERSION=6.0.7; export CARLA_HOME=/home/carla; cmake -D CMAKE_EXPORT_COMPILE_COMMANDS=ON -D CMAKE_PREFIX_PATH=/home/TENA/lib/cmake -D BOOST_INCLUDEDIR=/home/TENA/TENA_boost_1.70.0.2_Library/u1804-gcc75-64/include -D VUG_INSTALL_DIR=/home/CarlaAdapter/INSTALL ../"
