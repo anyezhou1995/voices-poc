@@ -29,7 +29,6 @@ origin = GpsOrigin(
     )
 
 carla_tf = CarlaTransform(
-    yaw_offset_deg=30.0,   # ENU East -> CARLA X rotation
     offset_x=0.0,          # ENU origin coincides with CARLA (0,0,0)
     offset_y=0.0,
     offset_z=0.0
@@ -199,11 +198,12 @@ def process_BSM(hex_data):
         accel_long = decoded_bsm['value'][1]['coreData']['accelSet']['long']
         accel_long_converted = accel_long*0.01 #m^s^2
 
-        xyz = GeodeticToEcef(lat/10**7, longstr/10**7, 0)
+        xyz = GeodeticToEcef(lat/10**7, longstr/10**7, elevation/10)
         #xyz = lat_long_to_xyz_better(lat/1e7, longstr/1e7, 0)
         
         #x, y = xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
-        x, y, z = xyz['y'], xyz['x'], xyz['z']
+        #x, y, z = xyz['y'], xyz['x'], xyz['z']
+        x, y, z = gps_to_carla(lat/10**7, longstr/10**7, elevation/10)
 
         #if decoded_bsm['value'][1]['coreData']['id'] == "f03ad620":
         if decoded_bsm['value'][1]['coreData']['id'] == "f03ad628":
@@ -220,9 +220,11 @@ def process_BSM(hex_data):
             #print(xyz2['x'], xyz2['y'])
             print('MCity origin: ', mcity_origin['x'], mcity_origin['y'])
             '''
+            #print('Lead BSM Coordinate no offset: ', x, y, z)
             return True, x, y, speed_converted
         elif decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
-            print('Ego BSM Coordinate: ', x, y, z)
+            #print('Ego BSM Coordinate: ', x-mcity_origin['x'], y-mcity_origin['y'], z)
+            print('Ego BSM Coordinate no offset: ', x, y, z)
 
     return False, 0, 0, 0
 
@@ -474,8 +476,10 @@ def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
     """ Convert lat/lon to local XY coordinates relative to MCITY origin.
     ## TODO: use Delave map origin to replace mcity_origin
     """
-    xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
-    return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
+    #xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
+    x, y, z = gps_to_carla(lat_deg, lon_deg, elevation_m)
+    #return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
+    return x, y
 
 def _extract_lat_lon(record):
     """ Extract lat, lon, elevation from a record.

@@ -2,6 +2,11 @@ import math
 from dataclasses import dataclass
 from typing import Tuple
 
+carla_origin = { 
+                "x": 6378136.5, 
+                "y": 857.6, 
+                "z": 935.9
+            }
 
 # ==============================
 #  WGS-84 CONSTANTS
@@ -25,12 +30,9 @@ class GpsOrigin:
 class CarlaTransform:
     """
     Defines how to go from ENU (around GpsOrigin) to CARLA coordinates.
-    - yaw_offset_deg: rotation around Up axis (ENU 'U' / CARLA 'Z')
-                      from ENU East axis to CARLA X axis (CCW, degrees)
     - offset_x/y/z:   translation from ENU origin to CARLA origin (meters)
                       i.e., CARLA = Rz(yaw) * ENU + offset
     """
-    yaw_offset_deg: float
     offset_x: float
     offset_y: float
     offset_z: float
@@ -104,42 +106,39 @@ def ecef_to_enu(X: float, Y: float, Z: float,
 def enu_to_carla(e: float, n: float, u: float,
                  transform: CarlaTransform) -> Tuple[float, float, float]:
     """
-    Convert ENU coordinates to CARLA coordinates with a yaw rotation +
-    translation.
-
-    yaw_offset_deg: angle from ENU East axis to CARLA X axis (CCW, degrees).
+    Apply the CARLA left-handed mapping described in the TENA→CARLA notes:
+        +TENA x (East)  -> +CARLA y
+        +TENA y (North) -> +CARLA x
+        +TENA z (Up)    -> +CARLA z
+    Then add the translation offsets that anchor the ENU origin in CARLA space.
     """
-    theta = math.radians(transform.yaw_offset_deg)
-    cos_t = math.cos(theta)
-    sin_t = math.sin(theta)
+    carla_x = transform.offset_x + n     # north  → forward
+    carla_y = transform.offset_y + e     # east   → right
+    carla_z = transform.offset_z + u     # up     → up
+    return carla_x, carla_y, carla_z
 
-    # Rotation about Z (Up) axis
-    # [x_c]   [ cosθ  -sinθ  0 ] [e]
-    # [y_c] = [ sinθ   cosθ  0 ] [n]
-    # [z_c]   [  0      0    1 ] [u]
-    x_c = cos_t * e - sin_t * n
-    y_c = sin_t * e + cos_t * n
-    z_c = u  # still 'Up'; you can also scale/offset if needed
-
-    # Translation to CARLA origin
-    x_carla = x_c + transform.offset_x
-    y_carla = y_c + transform.offset_y
-    z_carla = z_c + transform.offset_z
-
-    return x_carla, y_carla, z_carla
-
+# ================================
+# ENU Orientation to CARLA
+# ================================
+def enu_orientation_to_carla(roll_deg: float, pitch_deg: float, yaw_deg: float) -> Tuple[float, float, float]:
+    carla_roll  = -roll_deg               # roll flips
+    carla_pitch =  pitch_deg              # pitch stays
+    carla_yaw   = 90.0 - yaw_deg          # yaw becomes 90° - ENU yaw
+    return carla_roll, carla_pitch, carla_yaw
 
 # ==============================
 #  MAIN: GPS -> CARLA
 # ==============================
+ORIGIN = GpsOrigin(0.00841723681631434, 0.00773563408642701, 0)
+# TRANSFORM = CarlaTransform(carla_origin['x'], carla_origin['y'], carla_origin['z'])
+TRANSFORM = CarlaTransform(0, 0, 0)
+
 def gps_to_carla(lat_deg: float,
                  lon_deg: float,
-                 h_m: float,
-                 origin: GpsOrigin,
-                 transform: CarlaTransform) -> Tuple[float, float, float]:
+                 h_m: float) -> Tuple[float, float, float]:
     """
     Full pipeline: GPS (lat, lon, h) -> ECEF -> ENU -> CARLA.
     """
     X, Y, Z = geodetic_to_ecef(lat_deg, lon_deg, h_m)
-    e, n, u = ecef_to_enu(X, Y, Z, origin)
-    return enu_to_carla(e, n, u, transform)
+    e, n, u = ecef_to_enu(X, Y, Z, ORIGIN)
+    return enu_to_carla(e, n, u, TRANSFORM)
