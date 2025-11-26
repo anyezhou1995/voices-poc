@@ -941,7 +941,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         #print("Processing BSM ID:", bsm_id)
         lat, lon, elev = core_data.get('lat'), core_data.get('long'), core_data.get('elev')  # Extract from core_data
         bsm_xy = _latlon_to_local_xy(lat/1e7, lon/1e7, elev/10)  # Convert lat/lon to local XY
-        bsm_heading = core_data.get('heading') * 0.0125  # Extract heading
+        bsm_heading = 90 - core_data.get('heading') * 0.0125  # Extract heading
         bsm_speed = core_data.get('speed') * 0.02  # Extract speed in m/s
         _cached_vehicles[bsm_id] = {
             'position': bsm_xy,
@@ -951,7 +951,10 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         }
         ## debug use, use ego BSM to set ego position
         ego_xy = _cached_vehicles['f03ad658']['position'] if 'f03ad658' in _cached_vehicles.keys() else ego_xy
-        ego_heading = _cached_vehicles['f03ad658']['heading'] if 'f03ad658' in _cached_vehicles.keys() else ego_heading
+        ego_heading = _cached_vehicles['f03ad658']['heading'] if 'f03ad658' in _cached_vehicles.keys() else 9999
+        lead_heading = _cached_vehicles['f03ad628']['heading'] if 'f03ad628' in _cached_vehicles.keys() else 9999
+        print(f"Ego heading BSM: {ego_heading}, Ego heading Carla: {carla_info['heading']}")
+        print(f"Lead heading BSM: {lead_heading}, Ego heading Carla: {carla_info['heading_lead']}")
         heading_vec = _heading_vector(ego_location, ego_heading)
         # if bsm_id == 'f03ad658':
         #     gpsPairs.append(GpsCarlaPair(lat/1e7, lon/1e7, elev/10,  carla_info['pos_ego'][0],  carla_info['pos_ego'][1], carla_info['pos_ego'][2]))

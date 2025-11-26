@@ -1202,9 +1202,10 @@ def receive_loop():
                 ## second receive to get BSM
                 #data, addr = sock.recvfrom(4096)
                 #hex_data = data.hex()
-                BSM_flag, x1, y1, speed = process_BSM(hex_data)
-                if BSM_flag:
-                    print('BSM: ', BSM_flag, x1, y1, speed)
+
+                # BSM_flag, x1, y1, speed = process_BSM(hex_data)
+                # if BSM_flag:
+                #     print('BSM for leader: ', BSM_flag, x1, y1, speed)
 
     except Exception as e:
         print(f"[Receive] Exception: {e}")
@@ -1218,7 +1219,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
-    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, spatInfo, spatCache
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache
     pygame.init()
     pygame.font.init()
     world = None
@@ -1310,30 +1311,31 @@ def game_loop(args):
 
             '''
             ## Compute info for speed planning
-            speed = speed_lead = 0
+            #speed = speed_lead = 0
             x_ego, y_ego, z_ego = world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z
             speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
             accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
             spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 5
             spacing_bsm = np.sqrt((x1-x_ego)**2 + (y1-y_ego)**2) - 5
             #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
-            dist2bar = 300 ## Just a fake value to run
+            dist2bar = 500 ## Just a fake value to run
             speed_diff = speed - speed_ego
             carla_info = {'pos_ego': (x_ego, y_ego, z_ego), 'spacing': spacing, 'heading': world.player.get_transform().rotation.yaw, 'speed_ego': speed_ego,
-                        'pos_lead': (x, y), 'heading_lead': ref_rotation.yaw, 'speed_lead': speed_lead}
+                        'pos_lead': (x, y), 'heading_lead': ref_rotation.yaw, 'speed_lead': speed}
 
             this_loop_time = datetime.datetime.now().timestamp()
             distance_traveled += speed_ego * (this_loop_time - last_loop_time)
             last_loop_time = this_loop_time
 
-            print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
+            #print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
             print('Carla spacing: ', spacing, ' BSM spacing: ', spacing_bsm)
 
-            # best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
-            # if best_leader:
-            #     print('Best leader from BSM: ', best_leader['bsm_id'] ,best_leader['distance'], best_leader['lead_speed'])
+            best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
+            if best_leader:
+                print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
 
-            print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
+            # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
+            # print('Leader Carla Coordinate: ', x, y)
 
             #print(dist2bar)
             
@@ -1366,7 +1368,8 @@ def game_loop(args):
                 if dt >= 0.2:
                     ##if approaching intersection, use eco-algo
                     if not pass_or_not:
-                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing_bsm*3.28, reference_timestamp, spatCache)
+                        #RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, speed*3.6/1.6, spacing_bsm*3.28, reference_timestamp, spatCache)
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, dist2bar*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
                         print('Can get before pass!')
                     ##if passed intersection, use CF model
                     else:
