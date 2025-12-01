@@ -157,11 +157,11 @@ def process_SPaT(hex_data):
     reference_timestamp = datetime.strptime('06:30:00', '%H:%M:%S')
 
     if hex_data.startswith("0013"):
-        print("Received SPaT")
-        greenWin = getGreenWindow(hex_data, reference_timestamp, greenDuration=40, redDuration=30)
-        return True, greenWin
+        # print("=============Received SPaT=================")
+        intersectionID, greenWin = getGreenWindow(hex_data, reference_timestamp, greenDuration=40, redDuration=30)
+        return True, greenWin, intersectionID
     else:
-        return False, {}
+        return False, {}, None
 
 def process_BSM(hex_data):
     '''
@@ -233,7 +233,7 @@ def decode_map(hex_data):
     # Decode MAP
     ##############################################################
     if hex_data.startswith("0012"):
-        print("Received MAP")
+        print("=============Received MAP=================")
         decoded_msg = J2735.DSRC.MessageFrame
         decoded_msg.from_uper(ba.unhexlify(hex_data))
         decoded_map = decoded_msg()
@@ -357,10 +357,9 @@ def spat_data_process(j2735_tena):
         # convert from hex using unhexlify then from uper using library
         decoded_msg.from_uper(ba.unhexlify(j2735_tena))
         # format data into json
-        # decoded_msg_json = decoded_msg.to_json()
-
-        print('')
-        # print(decoded_msg_json)
+        decoded_msg_json = decoded_msg.to_json()
+        # print("Decoded SPaT: ")
+        # print(str(decoded_msg_json)+"\n")
     except Exception as err:
         print(f"Unexpected {err}, {type(err)}")
         raise
@@ -433,7 +432,7 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
     minEndTimeSecond = float(phase2State['minEndTime'] / 10 - minute * 60)
     minEndTimeSecond = round(minEndTimeSecond, 3)
     if minEndTimeSecond < 60:
-        print('{}:{}:{}'.format(hour, minute, minEndTimeSecond))
+        # print('{}:{}:{}'.format(hour, minute, minEndTimeSecond))
         minEndTimeStamp = datetime.strptime('{}:{}:{:.3f}'.format(hour, minute, minEndTimeSecond), '%H:%M:%S.%f')
     else:
         minEndTimeStamp = datetime.strptime(
@@ -454,11 +453,11 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
     t2e = t2s + greenDuration
 
     greenWindow = {'currentTime': currentTimeReference, 'status': phase2Status, 't1s': t1s, 't1e': t1e, 't2s': t2s, 't2e': t2e, 'r1s': r1s}
-    #print(greenWindow)
+    # print(greenWindow)
 
-    return greenWindow
+    return intersectionID, greenWindow
 
-def _heading_vector(location, override_heading):
+def _heading_vector(location, override_heading=None):
     """Return unit vector that represents ego forward direction."""
     yaw_deg = None
     if override_heading is not None:
@@ -902,6 +901,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         #stripped = payload.strip().lower()
         if payload.startswith("0014"):
             #stripped = stripped[2:]
+            # print("=============Received BSM=================")
             try:
                 decoded = J2735.DSRC.MessageFrame
                 decoded.from_uper(ba.unhexlify(payload))
@@ -953,9 +953,10 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         ego_xy = _cached_vehicles['f03ad658']['position'] if 'f03ad658' in _cached_vehicles.keys() else ego_xy
         ego_heading = _cached_vehicles['f03ad658']['heading'] if 'f03ad658' in _cached_vehicles.keys() else 9999
         lead_heading = _cached_vehicles['f03ad628']['heading'] if 'f03ad628' in _cached_vehicles.keys() else 9999
-        print(f"Ego heading BSM: {ego_heading}, Ego heading Carla: {carla_info['heading']}")
-        print(f"Lead heading BSM: {lead_heading}, Ego heading Carla: {carla_info['heading_lead']}")
+        #print(f"Ego heading BSM: {ego_heading}, Ego heading Carla: {carla_info['heading']}")
+        #print(f"Lead heading BSM: {lead_heading}, Ego heading Carla: {carla_info['heading_lead']}")
         heading_vec = _heading_vector(ego_location, ego_heading)
+        
         # if bsm_id == 'f03ad658':
         #     gpsPairs.append(GpsCarlaPair(lat/1e7, lon/1e7, elev/10,  carla_info['pos_ego'][0],  carla_info['pos_ego'][1], carla_info['pos_ego'][2]))
 
@@ -971,6 +972,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
 
     #print('BSM_INFO: ', _cached_vehicles)
     #print('CARLA INFO: ', carla_info)
+    
     if not _cached_vehicles:
         if _cached_bsm_state['last_leader'] is not None:
             stale = dict(_cached_bsm_state['last_leader'])
@@ -995,7 +997,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
                 continue
         candidate_list.append((vehicle, dist_to_vehicle, vehicle_speed, vehicle_heading))
 
-    print("Candidate lead vehicles found:", len(candidate_list))
+    # print("Candidate lead vehicles found:", len(candidate_list)-1)
     if not candidate_list:
         if _cached_bsm_state['last_leader'] is not None:
             stale = dict(_cached_bsm_state['last_leader'])
@@ -1210,3 +1212,63 @@ def EcoControl(vehicle, lead_vehicle, move_speed, mov_loc):
     control = PID.run_step(move_speed, move_loc)
 
     return control
+
+import csv
+
+class vehicle_logger(object):
+    def __init__(self, outfile):
+        self.csvout = open(outfile, 'w')
+        self.csv_w = csv.writer(self.csvout)
+        self.headers = ["TimeStamp", "x", "y", "Heading", "Speed", "Accel"]
+        self.csv_w.writerow(self.headers)
+        self.time = time.time()
+
+    def record(self, data):
+        currentRow = []
+        next_t = time.time()
+        currentRow.append('%.3f'%(next_t-self.time))
+        #self.time = next_t
+        for i in data:
+            currentRow.append('%.3f'%(i))
+        
+        self.csv_w.writerow(currentRow)
+
+INTERSECTION_XY = {
+    '1': (-633.43, 774.79),
+    '2': (-487.62, 771.05),
+    '3': (-381.11, 760.60),
+    '4': (-133.25, 734.62),
+    '5': (53.89, 713.76)
+}
+
+def get_closest_intersection_carla(ego_location, ego_heading=None):
+    """ Get the closest intersection in CARLA coordinates.
+    Parameters
+    ----------
+    ego_location : carla.Location | dict | tuple
+        Current ego pose. Supports CARLA ``Location`` objects, dictionaries with
+        ``x``/``y`` or ``lat``/``long`` keys, or 2-tuples of (x, y).
+    Returns
+    -------
+    tuple | None
+        (x, y) coordinates of the closest intersection in CARLA coordinates,
+        or ``None`` if the ego location could not be interpreted.
+    """
+    ego_xy = _location_to_xy(ego_location)
+    heading_vec = _heading_vector(ego_location)
+    if ego_xy is None:
+        return '5', None
+    min_dist = float('inf')
+    closest_id, closest_xy = '5', None
+    for inter_id, inter_xy in INTERSECTION_XY.items():
+        vec_to_vehicle = np.array(inter_xy) - np.array(ego_xy)
+        forward_component = np.dot(vec_to_vehicle, heading_vec)
+        if forward_component <= 0:
+            continue
+        dist = math.hypot(ego_xy[0] - inter_xy[0], ego_xy[1] - inter_xy[1])
+        if dist < min_dist:
+            min_dist = dist
+            closest_xy = inter_xy
+            closest_id = inter_id
+    #print(f"Closest intersection: ID={closest_id}, Location={closest_xy}, Distance={min_dist:.2f} m")
+    return closest_id, min_dist
