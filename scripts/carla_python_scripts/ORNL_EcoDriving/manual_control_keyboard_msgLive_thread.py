@@ -1350,10 +1350,11 @@ def game_loop(args):
                 try:
                     best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
                     if best_leader:
-                        logger.info('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                        #print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                    # else:
-                    #     logger.warning('No leader found from BSM.')
+                        #logger.info('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                        print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                    else:
+                        logger.warning('No leader found from BSM.')
+                        best_leader = {'distance': 30, 'lead_speed': 30}
                 except Exception as e:
                     logger.error(f"[Carla] Finding leader exception: {e}")
                     best_leader = None
@@ -1391,13 +1392,14 @@ def game_loop(args):
                     if dt >= 0.2:
                         ##if approaching intersection, use eco-approaching algorithm
                         if not pass_or_not:
-                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                            #RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
+                            #RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
                             # logger.info('Use the latest SPaT to update eco-driving speed!')
                         ##if passed intersection, use CF model
                         else:
                             logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
-                            _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
+                            #_, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
+                            _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
                         RefSpd = min(40, RefSpd)
                         cache_time = datetime.datetime.now().timestamp()
                 except Exception as e:
