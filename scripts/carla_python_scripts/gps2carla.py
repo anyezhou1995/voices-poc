@@ -129,7 +129,8 @@ def enu_orientation_to_carla(roll_deg: float, pitch_deg: float, yaw_deg: float) 
 # ==============================
 #  MAIN: GPS -> CARLA
 # ==============================
-ORIGIN = GpsOrigin(0.00841723681631434, 0.00773563408642701, 0)
+ORIGIN_OLD = GpsOrigin(0.00841723681631434, 0.00773563408642701, 0)
+ORIGIN = GpsOrigin(39.68854712116352, -75.74805413881644, 0)
 # TRANSFORM = CarlaTransform(carla_origin['x'], carla_origin['y'], carla_origin['z'])
 TRANSFORM = CarlaTransform(0, 0, 0)
 
@@ -220,7 +221,8 @@ def distance_real_latlon(latlongBSM, latlongMAP):
     lon1 = _normalize_latlon(lon1, is_lat=False)
     lat2 = _normalize_latlon(lat2, is_lat=True)
     lon2 = _normalize_latlon(lon2, is_lat=False)
-    lat_real1, lon_real1 = bsm_to_real_latlon(lat1, lon1,
-                                               ORIGIN.lat_deg, ORIGIN.lon_deg,
-                                               lat2, lon2)
+    # lat_real1, lon_real1 = bsm_to_real_latlon(lat1, lon1,
+    #                                            ORIGIN.lat_deg, ORIGIN.lon_deg,
+    #                                            lat2, lon2)
+    lat_real1, lon_real1 = lat1, lon1
     return haversine(lat_real1, lon_real1, lat2, lon2), (lat_real1, lon_real1)

@@ -1271,9 +1271,10 @@ def game_loop(args):
     cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
     c_pitch, c_yaw, c_roll = df_waypoints['pitch'].to_numpy(), df_waypoints['yaw'].to_numpy(), df_waypoints['roll'].to_numpy()
     c_distance = df_waypoints['distance_traveled_m'].to_numpy()
-    spawn_pos = carla.Transform(carla.Location(x=cx[0], y=cy[0], z=3.0), carla.Rotation(pitch=0.0, yaw=10, roll=0.0))
+    spawn_pos = carla.Transform(carla.Location(x=cx[0], y=cy[0], z=3.0), carla.Rotation(pitch=0.0, yaw=21, roll=0.0))
 
     best_phase = None
+    closest_intersection_id, best_SG_id = '9', '2'
 
     try:
         client = carla.Client(args.host, args.port)
@@ -1326,7 +1327,7 @@ def game_loop(args):
                         break
 
                 ## Compute info for speed planning
-                speed = speed_lead   ##### Just a fake value to run
+                speed = speed_lead = 20  ##### Just a fake value to run
                 x_ego, y_ego, z_ego = world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z
                 speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
                 accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
@@ -1362,17 +1363,18 @@ def game_loop(args):
                     #best_leader = None
                     best_leader = {'distance': 50, 'lead_speed': 30}
 
-                # try:
-                #     #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
-                #     best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
-                #     if best_phase:
-                #         #logger.info(f'################Best signal phase from MAP: {best_phase}')
-                #         print("################# Update phase group info from MAP! ", best_phase)
-                #     else:
-                #         logger.warning('No updated signal phase group from MAP.')
-                # except Exception as e:
-                #     logger.error(f"[Carla] Finding signal phase exception: {e}")
-                #     best_phase = None
+                try:
+                    #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                    best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                    if best_phase:
+                        #logger.info(f'################Best signal phase from MAP: {best_phase}')
+                        print("################# Update phase group info from MAP! ", best_phase)
+                        closest_intersection_id, best_SG_id = best_phase['intersection_id'], best_phase['signal_group']
+                    else:
+                        logger.warning('No updated signal phase group from MAP.')
+                except Exception as e:
+                    logger.error(f"[Carla] Finding signal phase exception: {e}")
+                    best_phase = None
                 #logger.info('Best phase: ', best_phase)
 
                 # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
