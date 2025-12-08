@@ -13,7 +13,7 @@ import math, sys
 import numpy as np
 
 from find_carla_egg import find_carla_egg
-from gps2carla import gps_to_carla, GpsOrigin, CarlaTransform
+from gps2carla import gps_to_carla, GpsOrigin, CarlaTransform, distance_real_latlon
 from mapOffset import GpsCarlaPair, calibrate_enu_to_carla
 
 carla_egg_file = find_carla_egg()
@@ -56,6 +56,7 @@ _cached_map_state = {
 }
 
 _cached_intersections = {}
+_cached_intersections_latlon = {}
 
 _cached_bsm_state = {
     "decoded_bsm": None,
@@ -220,11 +221,13 @@ def process_BSM(hex_data):
             #print(xyz2['x'], xyz2['y'])
             print('MCity origin: ', mcity_origin['x'], mcity_origin['y'])
             '''
-            #print('Lead BSM Coordinate no offset: ', x, y, z)
-            return True, x, y, speed_converted
+            print('Lead BSM Coordinate: ', x, y, z)
+            # return True, x, y, speed_converted
+            return True, lat/1e7, longstr/1e7, speed_converted
         elif decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
             #print('Ego BSM Coordinate: ', x-mcity_origin['x'], y-mcity_origin['y'], z)
             print('Ego BSM Coordinate no offset: ', x, y, z)
+            return True, lat/1e7, longstr/1e7, speed_converted
 
     return False, 0, 0, 0
 
@@ -478,7 +481,8 @@ def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
     #xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
     x, y, z = gps_to_carla(lat_deg, lon_deg, elevation_m)
     #return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
-    return x, y
+    # return x, y
+    return y, -x
 
 def _extract_lat_lon(record):
     """ Extract lat, lon, elevation from a record.
@@ -535,7 +539,7 @@ def _location_to_xy(location):
     return None
 
 
-def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=None, max_search_distance=100.0):
+def determine_signal_phase_from_map(ego_location, ego_latlong, map_message=None, ego_heading=None, max_search_distance=150.0):
     """Return the traffic signal group (phase) that matches the ego vehicle location and travel direction.
 
     Parameters
@@ -584,17 +588,19 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
             return payload
         if hasattr(payload, '__call__'):
             return payload()
-        if isinstance(payload, str):
-            stripped = payload.strip().lower()
-            if stripped.startswith('0x'):
-                stripped = stripped[2:]
-            try:
-                return json.loads(payload)
-            except (json.JSONDecodeError, TypeError):
-                pass
+        # if isinstance(payload, str):
+        #     stripped = payload.strip().lower()
+        #     if stripped.startswith('0x'):
+        #         stripped = stripped[2:]
+        #     try:
+        #         return json.loads(payload)
+        #     except (json.JSONDecodeError, TypeError):
+        #         pass
+        if payload.startswith("0012"):
             try:
                 decoded = J2735.DSRC.MessageFrame
-                decoded.from_uper(ba.unhexlify(stripped))
+                decoded.from_uper(ba.unhexlify(payload))
+                print(str(decoded.to_json()) + "\n")
                 return decoded()
             except Exception:
                 return None
@@ -616,9 +622,14 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
             Offset as a numpy array and mode string, or (None, None) if
             the delta could not be interpreted.
         """
-        if not isinstance(delta, dict):
+        delta_items = []
+        if isinstance(delta, dict):
+            delta_items = delta.items()
+        elif isinstance(delta, tuple) and len(delta) == 2 and isinstance(delta[0], str):
+            delta_items = [(delta[0], delta[1])]
+        if not delta_items:
             return None, None
-        for key, value in delta.items():
+        for key, value in delta_items:
             ## Handle relative XY offsets: if the MAP stores x/y deltas in centimeters/decimeters 
             ## relative to the previous point (or to the intersection reference point for the first node)
             if key.startswith('node-XY') and isinstance(value, dict):
@@ -665,7 +676,12 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
         node_list = lane.get('nodeList') if isinstance(lane, dict) else None
         if not node_list:
             return []
-        nodes = node_list.get('nodes') if isinstance(node_list, dict) else None
+        if isinstance(node_list, dict):
+            nodes = node_list.get('nodes')
+        elif isinstance(node_list, tuple) and len(node_list) == 2 and node_list[0] == 'nodes':
+            nodes = node_list[1]
+        else:
+            nodes = None
         if not nodes:
             return []
         points = []
@@ -748,6 +764,9 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
         _cached_map_state['timestamp'] = time.time()
     else:
         decoded_map = _cached_map_state['decoded_map']
+    
+    #print('## [DEBUG] decoded MAP: ', decoded_map)
+    
     ego_xy = _location_to_xy(ego_location)
     heading_vec = _heading_vector(ego_location, ego_heading)
     if decoded_map is None or ego_xy is None:
@@ -759,8 +778,10 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
 
     ## 2. Iterate through intersections and lanes to find best matching signal group
     map_body = decoded_map.get('value') if isinstance(decoded_map, dict) else None
-    if isinstance(map_body, list) and len(map_body) > 1:
+    # print('## [DEBUG] decoded MAP body: ', map_body)
+    if isinstance(map_body, list) or isinstance(map_body, tuple) and len(map_body) > 1:
         map_body = map_body[1]
+    # print('## [DEBUG] decoded MAP body: ', type(map_body))
     if not isinstance(map_body, dict):
         if _cached_map_state['last_match'] is not None:
             stale = dict(_cached_map_state['last_match'])
@@ -768,13 +789,16 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
             return stale
         return None
     intersections = map_body.get('intersections', [])
+    # print('## [DEBUG]', ' Intersections found in MAP message: ', len(intersections))
     if intersections:
         for intersection in intersections:
             ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
+            print('## [DEBUG] Intersection LatLongElev: ', ref_lat, ref_lon, ref_elev)
             intersection_id = intersection.get('id', {}).get('id')
             if ref_lat is None or ref_lon is None or intersection_id is None:
                 continue
             ref_xy = _latlon_to_local_xy(ref_lat, ref_lon, ref_elev)
+            print('## [DEBUG] Intersection coordinate: ', ref_xy)
             _cached_intersections[intersection_id] = {
                 'intersection': intersection,
                 'ref_xy': ref_xy,
@@ -789,21 +813,28 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
             return stale
         return None
 
+    # print('## [DEBUG] Intersections: ', _cached_intersections)
     ego_xy_vec = np.array(ego_xy)
     candidate_list = []
     for cached in _cached_intersections.values():
         intersection = cached['intersection']
         ref_xy = cached['ref_xy']
         ref_geo = cached['geo']
-        vec_to_intersection = np.array(ref_xy) - ego_xy_vec
-        dist_to_intersection = np.linalg.norm(vec_to_intersection)
+        #vec_to_intersection = np.array(ref_xy) - ego_xy_vec
+        #dist_to_intersection = np.linalg.norm(vec_to_intersection)
+        dist_to_intersection, ego_latlong_real = distance_real_latlon(ego_latlong, (ref_geo[0], ref_geo[1]))
+        ref_ego_xy = _latlon_to_local_xy(ego_latlong_real[0], ego_latlong_real[1], ref_elev)
+        vec_to_intersection = np.array(ref_xy) - np.array(ref_ego_xy)
         if dist_to_intersection < 1.0:
             continue
         if heading_vec is not None:
             forward_component = np.dot(vec_to_intersection, heading_vec)
+            print('## [DEBUG] Intersection specs: ', forward_component, dist_to_intersection)
             if forward_component <= 0:
                 continue
         candidate_list.append((dist_to_intersection, intersection, ref_xy, ref_geo))
+
+    #print('## [DEBUG] Intersection candidates: ', candidate_list)
 
     if not candidate_list:
         if _cached_map_state['last_match'] is not None:
@@ -815,18 +846,289 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
     candidate_list.sort(key=lambda item: item[0])
     target_distance, target_intersection, target_ref_xy, target_geo = candidate_list[0]
 
+    #print('## [DEBUG] Target: ', target_intersection)
+
     best_match = None
     lane_set = target_intersection.get('laneSet', [])
     for lane in lane_set:
         signal_groups = _collect_signal_groups(lane)
+        print('## [DEBUG] Signal_groups: ', signal_groups)
         if not signal_groups:
             continue
         lane_points = _build_lane_points(lane, target_ref_xy, target_geo)
         if len(lane_points) < 2:
             continue
-        distance = _point_to_polyline_distance(ego_xy, lane_points)
-        if distance > max_search_distance:
+        distance = _point_to_polyline_distance(ref_ego_xy, lane_points)
+        # if distance > max_search_distance:
+        #     continue
+        if best_match is None or distance < best_match['distance']:
+            best_match = {
+                'signal_group': signal_groups[0],
+                'lane_id': lane.get('laneID'),
+                'distance': distance,
+                'intersection_id': target_intersection.get('id', {}).get('id'),
+                'approach_id': lane.get('ingressApproach') or lane.get('egressApproach'),
+                'intersection_distance': target_distance,
+                'stale': False
+            }
+    print('## [DEBUG] Target: ', best_match['signal_group'])
+    if best_match is not None:
+        _cached_map_state['last_match'] = dict(best_match)
+        return best_match
+
+    if _cached_map_state['last_match'] is not None:
+        stale = dict(_cached_map_state['last_match'])
+        stale['stale'] = True
+        return stale
+
+    return None
+
+def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_heading=None, max_search_distance=150.0):
+    """Determine the MAP signal group using only lat/lon values (no CARLA XY conversion).
+
+    Parameters
+    ----------
+    ego_latlon : tuple | list | dict
+        Ego latitude/longitude in degrees (or 1e7 scaled ints). Elevation is optional.
+    map_message : str | dict | callable | None
+        MAP message in any format accepted by ``determine_signal_phase_from_map``.
+    ego_heading : float | None
+        Optional heading/yaw in degrees where 0° points east and 90° points north.
+    max_search_distance : float
+        Maximum allowable lateral distance (meters) from the lane centerline.
+
+    Returns
+    -------
+    dict | None
+        Same structure as ``determine_signal_phase_from_map`` but distances are computed
+        purely in meters on the WGS‑84 sphere. Cached results are annotated with
+        ``stale: True`` when MAP/ego data are missing.
+    """
+    R_EARTH = 6378137.0
+
+    def _decode_map(payload):
+        if payload is None:
+            return None
+        if isinstance(payload, dict):
+            return payload
+        if hasattr(payload, '__call__'):
+            return payload()
+        if isinstance(payload, str) and payload.startswith("0012"):
+            try:
+                decoded = J2735.DSRC.MessageFrame
+                decoded.from_uper(ba.unhexlify(payload))
+                return decoded()
+            except Exception:
+                return None
+        return None
+
+    def _normalize_latlon(value):
+        if value is None:
+            return None, None
+        if isinstance(value, (tuple, list)) and len(value) >= 2:
+            lat, lon = value[0], value[1]
+        elif isinstance(value, dict):
+            lat, lon, _ = _extract_lat_lon(value)
+        else:
+            return None, None
+        if abs(lat) > 90:
+            lat = lat / 1e7
+        if abs(lon) > 180:
+            lon = lon / 1e7
+        return float(lat), float(lon)
+
+    def _offset_to_latlon(ref_lat, ref_lon, east_m, north_m):
+        lat_rad = math.radians(ref_lat)
+        dlat = north_m / R_EARTH
+        dlon = east_m / (R_EARTH * math.cos(lat_rad))
+        return math.degrees(math.radians(ref_lat) + dlat), math.degrees(math.radians(ref_lon) + dlon)
+
+    def _latlon_to_local_en(lat_deg, lon_deg, lat_ref_deg, lon_ref_deg):
+        lat_ref_rad = math.radians(lat_ref_deg)
+        dlat = math.radians(lat_deg - lat_ref_deg)
+        dlon = math.radians(lon_deg - lon_ref_deg)
+        north = dlat * R_EARTH
+        east = dlon * R_EARTH * math.cos(lat_ref_rad)
+        return east, north
+
+    def _node_delta_to_latlon(delta, ref_geo, last_point):
+        delta_items = []
+        if isinstance(delta, dict):
+            delta_items = delta.items()
+        elif isinstance(delta, tuple) and len(delta) == 2 and isinstance(delta[0], str):
+            delta_items = [(delta[0], delta[1])]
+        if not delta_items:
+            return None, None
+        for key, value in delta_items:
+            if key.startswith('node-XY') and isinstance(value, dict):
+                x_raw = value.get('x')
+                y_raw = value.get('y')
+                if x_raw is None or y_raw is None:
+                    continue
+                east = x_raw / 10.0
+                north = y_raw / 10.0
+                base_lat, base_lon = last_point if last_point is not None else (ref_geo[0], ref_geo[1])
+                lat, lon = _offset_to_latlon(base_lat, base_lon, east, north)
+                return (lat, lon), 'relative'
+            if key == 'node-LatLon' and isinstance(value, dict):
+                lat = value.get('lat')
+                lon = value.get('lon') or value.get('long')
+                if lat is None or lon is None:
+                    continue
+                if abs(lat) > 90:
+                    lat = lat / 1e7
+                if abs(lon) > 180:
+                    lon = lon / 1e7
+                return (lat, lon), 'absolute'
+        return None, None
+
+    def _build_lane_points_latlon(lane, ref_geo):
+        #print('[DEBUG] lane type: ', type(lane))
+        node_list = lane.get('nodeList') if isinstance(lane, dict) else None
+        #print('[DEBUG] node_list: ', node_list)
+        if not node_list:
+            return []
+        if isinstance(node_list, dict):
+            nodes = node_list.get('nodes')
+        elif isinstance(node_list, tuple) and len(node_list) == 2 and node_list[0] == 'nodes':
+            nodes = node_list[1]
+        else:
+            nodes = None
+        #print('[DEBUG] nodes type: ', type(nodes))
+        if not nodes:
+            return []
+        points = []
+        last_point = None
+        for node in nodes:
+            delta = node.get('delta') if isinstance(node, dict) else None
+            latlon, mode = _node_delta_to_latlon(delta, ref_geo, last_point)
+            if latlon is None:
+                continue
+            last_point = latlon
+            points.append((float(last_point[0]), float(last_point[1])))
+        return points
+
+    def _point_to_polyline_distance_latlon(point_latlon, polyline):
+        if point_latlon is None or not polyline:
+            return float('inf')
+        lat_p, lon_p = point_latlon
+        best = float('inf')
+        for idx in range(len(polyline) - 1):
+            lat1, lon1 = polyline[idx]
+            lat2, lon2 = polyline[idx + 1]
+            e2, n2 = _latlon_to_local_en(lat2, lon2, lat1, lon1)
+            ep, np_ = _latlon_to_local_en(lat_p, lon_p, lat1, lon1)
+            if e2 == 0 and n2 == 0:
+                dist = math.hypot(ep, np_)
+            else:
+                t = ((ep * e2 + np_ * n2) / (e2 * e2 + n2 * n2))
+                t = max(0.0, min(1.0, t))
+                proj_e = t * e2
+                proj_n = t * n2
+                dist = math.hypot(ep - proj_e, np_ - proj_n)
+            if dist < best:
+                best = dist
+        return best
+
+    decoded_map = _decode_map(map_message) if map_message is not None else None
+    if decoded_map is not None:
+        _cached_map_state['decoded_map'] = decoded_map
+        _cached_map_state['timestamp'] = time.time()
+    else:
+        decoded_map = _cached_map_state.get('decoded_map')
+
+    ego_lat, ego_lon = _normalize_latlon(ego_latlon)
+    heading_vec = _heading_vector(None, ego_heading)
+
+    if decoded_map is None or ego_lat is None or ego_lon is None:
+        if _cached_map_state.get('last_match_latlon') is not None:
+            stale = dict(_cached_map_state['last_match_latlon'])
+            stale['stale'] = True
+            return stale
+        return None
+
+    map_body = decoded_map.get('value') if isinstance(decoded_map, dict) else None
+    if isinstance(map_body, (list, tuple)) and len(map_body) > 1:
+        map_body = map_body[1]
+    if not isinstance(map_body, dict):
+        if _cached_map_state.get('last_match_latlon') is not None:
+            stale = dict(_cached_map_state['last_match_latlon'])
+            stale['stale'] = True
+            return stale
+        return None
+
+    intersections = map_body.get('intersections', [])
+    if intersections:
+        for intersection in intersections:
+            ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
+            intersection_id = intersection.get('id', {}).get('id')
+            if ref_lat is None or ref_lon is None or intersection_id is None:
+                continue
+            _cached_intersections_latlon[intersection_id] = {
+                'intersection': intersection,
+                'geo': (ref_lat, ref_lon, ref_elev),
+                'timestamp': time.time()
+            }
+
+    if not _cached_intersections_latlon:
+        if _cached_map_state.get('last_match_latlon') is not None:
+            stale = dict(_cached_map_state['last_match_latlon'])
+            stale['stale'] = True
+            return stale
+        return None
+
+    candidate_list = []
+    for cached in _cached_intersections_latlon.values():
+        intersection = cached['intersection']
+        ref_geo = cached['geo']
+        dist_to_intersection, ego_latlon_real = distance_real_latlon((ego_lat, ego_lon), (ref_geo[0], ref_geo[1]))
+        if dist_to_intersection < 1.0:
             continue
+        if heading_vec is not None:
+            east, north = _latlon_to_local_en(ref_geo[0], ref_geo[1], ego_latlon_real[0], ego_latlon_real[1])
+            forward_component = east * heading_vec[0] + north * heading_vec[1]
+            if forward_component <= 0:
+                continue
+        candidate_list.append((dist_to_intersection, intersection, ref_geo, ego_latlon_real))
+
+    #print('## [DEBUG] Intersection candidates: ', len(candidate_list))
+
+    if not candidate_list:
+        if _cached_map_state.get('last_match_latlon') is not None:
+            stale = dict(_cached_map_state['last_match_latlon'])
+            stale['stale'] = True
+            return stale
+        return None
+
+    candidate_list.sort(key=lambda item: item[0])
+    target_distance, target_intersection, target_geo, target_ego_latlon_real = candidate_list[0]
+
+    print('## [DEBUG] Ego original lat lon: ', ego_lat, ego_lon, target_geo)
+    print('## [DEBUG] Candidate metrics: ', target_distance, target_ego_latlon_real)
+
+    best_match = None
+    lane_set = target_intersection.get('laneSet', [])
+    #print('## [DEBUG] Lane set size: ', len(lane_set))
+    for lane in lane_set:
+        signal_groups = []
+        for connection in lane.get('connectsTo', []):
+            sg = connection.get('signalGroup')
+            if sg is None and isinstance(connection.get('connectingLane'), dict):
+                sg = connection['connectingLane'].get('signalGroup')
+            if sg is not None and sg not in signal_groups:
+                signal_groups.append(sg)
+        
+        #print('## [DEBUG] Signal groups: ', len(signal_groups))
+        if not signal_groups:
+            continue
+        lane_points = _build_lane_points_latlon(lane, target_geo)
+        #print('## [DEBUG] Lane points: ', len(lane_points))
+        if len(lane_points) < 2:
+            continue
+        distance = _point_to_polyline_distance_latlon(target_ego_latlon_real, lane_points)
+        print('## [DEBUG] Lateral distance: ', distance)
+        # if distance > max_search_distance:
+        #     continue
         if best_match is None or distance < best_match['distance']:
             best_match = {
                 'signal_group': signal_groups[0],
@@ -839,11 +1141,11 @@ def determine_signal_phase_from_map(ego_location, map_message=None, ego_heading=
             }
 
     if best_match is not None:
-        _cached_map_state['last_match'] = dict(best_match)
+        _cached_map_state['last_match_latlon'] = dict(best_match)
         return best_match
 
-    if _cached_map_state['last_match'] is not None:
-        stale = dict(_cached_map_state['last_match'])
+    if _cached_map_state.get('last_match_latlon') is not None:
+        stale = dict(_cached_map_state['last_match_latlon'])
         stale['stale'] = True
         return stale
 
@@ -905,6 +1207,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
             try:
                 decoded = J2735.DSRC.MessageFrame
                 decoded.from_uper(ba.unhexlify(payload))
+                #print(str(decoded.to_json()) + "\n")
                 return decoded()
             except Exception:
                 return None
@@ -942,6 +1245,9 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         lat, lon, elev = core_data.get('lat'), core_data.get('long'), core_data.get('elev')  # Extract from core_data
         bsm_xy = _latlon_to_local_xy(lat/1e7, lon/1e7, elev/10)  # Convert lat/lon to local XY
         bsm_heading = 90 - core_data.get('heading') * 0.0125  # Extract heading
+        print("[DEBUG] BSM LatLonElev: ", lat, lon, elev)
+        print("[DEBUG] BSM Coordinate: ", bsm_xy)
+        print("[DEBUG] Carla Coordinate: ", carla_info['pos_ego'])
         bsm_speed = core_data.get('speed') * 0.02  # Extract speed in m/s
         _cached_vehicles[bsm_id] = {
             'position': bsm_xy,
@@ -970,8 +1276,8 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         #         print(f"  offset_y       = {tf.offset_y:.6f} m")
         #         print(f"  offset_z       = {tf.offset_z:.6f} m")
 
-    #print('BSM_INFO: ', _cached_vehicles)
-    #print('CARLA INFO: ', carla_info)
+    print('[DEBUG] BSM_INFO: ', _cached_vehicles)
+    print('[DEBUG] CARLA INFO: ', carla_info)
     
     if not _cached_vehicles:
         if _cached_bsm_state['last_leader'] is not None:
@@ -1219,7 +1525,7 @@ class vehicle_logger(object):
     def __init__(self, outfile):
         self.csvout = open(outfile, 'w')
         self.csv_w = csv.writer(self.csvout)
-        self.headers = ["TimeStamp", "x", "y", "Heading", "Speed", "Accel"]
+        self.headers = ["TimeStamp", "x", "y", "Heading", "Speed", "Accel", "DesiredSpd"]
         self.csv_w.writerow(self.headers)
         self.time = time.time()
 

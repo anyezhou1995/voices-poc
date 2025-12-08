@@ -234,7 +234,7 @@ class World(object):
         while self.player is None:
             if args.x and args.y and args.z:
                 print("spawning in custom loc")
-                spawn_point = carla.Transform(carla.Location(x=args.x,y=args.y,z=args.z),carla.Rotation(yaw=90))
+                spawn_point = carla.Transform(carla.Location(x=args.x,y=args.y,z=args.z), carla.Rotation(yaw=90))
             else:
                 if not self.map.get_spawn_points():
                     print('There are no spawn points available in your map/town.')
@@ -264,7 +264,7 @@ class World(object):
 
         # settign up PID controller
         args_lateral = {'K_P': 1.95/2, 'K_D': 0.2/2, 'K_I': 0.075, 'dt': 0.08}
-        args_longitudinal = {'K_P': 1.0*3.5, 'K_D': 0.02, 'K_I': 0.05, 'dt': 0.08}
+        args_longitudinal = {'K_P': 1.0*3.5, 'K_D': 0.02, 'K_I': 0.025, 'dt': 0.08}
         self.PID = VehiclePIDController(self.player, args_lateral, args_longitudinal)
 
     def next_weather(self, reverse=False):
@@ -1161,7 +1161,7 @@ import json, threading, time
 #import matplotlib.pyplot as plt
 
 # Speed planner and low-level throttle/brake steering controller
-from ORNL_utils import get_closest_intersection_carla, draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, decode_map, search_target_index, search_target_index_v2, determine_leader, vehicle_logger
+from ORNL_utils import get_closest_intersection_carla, draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, decode_map, search_target_index, search_target_index_v2, determine_signal_phase_from_map_latlon, determine_leader, vehicle_logger
 from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
@@ -1223,14 +1223,14 @@ def receive_loop():
             hex_data = data.hex()
             with info_lock:
                 ## first receive to get SPaT
-                map_info = decode_map(hex_data)
+                #map_info = decode_map(hex_data)
                 SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data)
 
                 ## second receive to get BSM
                 #data, addr = sock.recvfrom(4096)
                 #hex_data = data.hex()
 
-                # BSM_flag, x1, y1, speed = process_BSM(hex_data)
+                BSM_flag, x1, y1, speed = process_BSM(hex_data)
                 # if BSM_flag:
                 #     print('BSM for leader: ', BSM_flag, x1, y1, speed)
 
@@ -1248,7 +1248,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
-    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, vehicle_logger, intersection_id, logger
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, vehicle_logger, intersection_id, logger, RefSpd
     pygame.init()
     pygame.font.init()
     world = None
@@ -1271,7 +1271,9 @@ def game_loop(args):
     cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
     c_pitch, c_yaw, c_roll = df_waypoints['pitch'].to_numpy(), df_waypoints['yaw'].to_numpy(), df_waypoints['roll'].to_numpy()
     c_distance = df_waypoints['distance_traveled_m'].to_numpy()
-    spawn_pos = carla.Transform(carla.Location(x=cx[0], y=cy[0], z=3.0), carla.Rotation(pitch=0.0, yaw=c_yaw[0], roll=0.0))
+    spawn_pos = carla.Transform(carla.Location(x=cx[0], y=cy[0], z=3.0), carla.Rotation(pitch=0.0, yaw=10, roll=0.0))
+
+    best_phase = None
 
     try:
         client = carla.Client(args.host, args.port)
@@ -1324,12 +1326,12 @@ def game_loop(args):
                         break
 
                 ## Compute info for speed planning
-                speed = speed_lead = 30    ##### Just a fake value to run
+                speed = speed_lead   ##### Just a fake value to run
                 x_ego, y_ego, z_ego = world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z
                 speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
                 accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
                 spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 5
-                spacing_bsm = np.sqrt((x1-x_ego)**2 + (y1-y_ego)**2) - 5
+                # spacing_bsm = np.sqrt((x1-x_ego)**2 + (y1-y_ego)**2) - 5
                 #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
                 dist2bar = 500      ##### Just a fake value to run
                 speed_diff = speed - speed_ego
@@ -1342,7 +1344,7 @@ def game_loop(args):
 
                 closest_intersection_id, closest_intersection_dist = get_closest_intersection_carla(world.player.get_transform())
 
-                vehicle_logger.record([x_ego, y_ego, world.player.get_transform().rotation.yaw, speed_ego, accel_ego])
+                vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6])
 
                 #print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
                 #print('Carla spacing: ', spacing, ' BSM spacing: ', spacing_bsm)
@@ -1351,13 +1353,27 @@ def game_loop(args):
                     best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
                     if best_leader:
                         #logger.info('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                        print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                        #print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                        print("Update leader info from BSM!")
                     else:
-                        logger.warning('No leader found from BSM.')
-                        best_leader = {'distance': 30, 'lead_speed': 30}
+                        logger.warning('No leader found from BSM, using cached values')
                 except Exception as e:
                     logger.error(f"[Carla] Finding leader exception: {e}")
-                    best_leader = None
+                    #best_leader = None
+                    best_leader = {'distance': 50, 'lead_speed': 30}
+
+                # try:
+                #     #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                #     best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                #     if best_phase:
+                #         #logger.info(f'################Best signal phase from MAP: {best_phase}')
+                #         print("################# Update phase group info from MAP! ", best_phase)
+                #     else:
+                #         logger.warning('No updated signal phase group from MAP.')
+                # except Exception as e:
+                #     logger.error(f"[Carla] Finding signal phase exception: {e}")
+                #     best_phase = None
+                #logger.info('Best phase: ', best_phase)
 
                 # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
                 # print('Leader Carla Coordinate: ', x, y)
@@ -1392,14 +1408,14 @@ def game_loop(args):
                     if dt >= 0.2:
                         ##if approaching intersection, use eco-approaching algorithm
                         if not pass_or_not:
-                            #RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
+                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                            # RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
                             # logger.info('Use the latest SPaT to update eco-driving speed!')
                         ##if passed intersection, use CF model
                         else:
                             logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
-                            #_, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
-                            _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
+                            _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
+                            # _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
                         RefSpd = min(40, RefSpd)
                         cache_time = datetime.datetime.now().timestamp()
                 except Exception as e:

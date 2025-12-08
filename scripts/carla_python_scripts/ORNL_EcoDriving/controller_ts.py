@@ -97,12 +97,10 @@ class VehiclePIDController():
 
         return control
 
-
 class PIDLongitudinalController():
     """
     PIDLongitudinalController implements longitudinal control using a PID.
     """
-
 
     def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.03):
         """
@@ -224,3 +222,89 @@ class PIDLateralController():
             _ie = 0.0
 
         return np.clip((self._k_p * _dot) + (self._k_d * _de) + (self._k_i * _ie), -1.0, 1.0)
+
+class PIDLongitudinalController_coast():
+    """
+    PIDLongitudinalController implements longitudinal control using a PID,
+    with optional coasting behavior to reduce throttle/brake chatter.
+    """
+
+    def __init__(self, vehicle,
+                 K_P=1.0, K_D=0.0, K_I=0.0,
+                 dt=0.03,
+                 v_coast_band=0.5,      # [km/h] speed error band for coasting
+                 u_deadzone=0.05,       # [-] small cmd -> 0 (no actuation)
+                 u_switch_thresh=0.15   # [-] hysteresis threshold at sign changes
+                 ):
+        self._vehicle = vehicle
+        self._k_p = K_P
+        self._k_d = K_D
+        self._k_i = K_I
+        self._dt = dt
+        self._error_buffer = deque(maxlen=10)
+
+        # coasting-related parameters
+        self._v_coast_band = v_coast_band
+        self._u_deadzone = u_deadzone
+        self._u_switch_thresh = u_switch_thresh
+
+        self._last_control = 0.0  # remember last output (for hysteresis)
+
+    def run_step(self, target_speed, debug=False):
+        """
+        Execute one step of longitudinal control to reach a given target speed.
+
+        :param target_speed: target speed in Km/h
+        :param debug: boolean for debugging
+        :return: longitudinal command in [-1, 1]
+                 (e.g. >0 = throttle, <0 = brake)
+        """
+        current_speed = get_speed(self._vehicle)
+
+        if debug:
+            print(f'Current speed = {current_speed:.2f} km/h, target = {target_speed:.2f} km/h')
+
+        return self._pid_control(target_speed, current_speed)
+
+    def _pid_control(self, target_speed, current_speed):
+        """
+        Estimate the throttle/brake of the vehicle based on the PID equations
+
+        :param target_speed:  target speed in Km/h
+        :param current_speed: current speed of the vehicle in Km/h
+        :return: throttle/brake control in [-1, 1]
+        """
+
+        error = target_speed - current_speed
+        self._error_buffer.append(error)
+
+        if len(self._error_buffer) >= 2:
+            _de = (self._error_buffer[-1] - self._error_buffer[-2]) / self._dt
+            _ie = sum(self._error_buffer) * self._dt
+        else:
+            _de = 0.0
+            _ie = 0.0
+
+        # raw PID output
+        u_pid = (self._k_p * error) + (self._k_d * _de) + (self._k_i * _ie)
+        u_pid = float(np.clip(u_pid, -1.0, 1.0))
+
+        # --- 1) Speed error coasting band ---
+        # If we're close enough in speed, don't do anything -> let the car coast.
+        if abs(error) < self._v_coast_band:
+            u = 0.0
+        else:
+            u = u_pid
+
+        # --- 2) Control deadzone ---
+        # If the command is tiny, treat it as zero to avoid twitching.
+        if abs(u) < self._u_deadzone:
+            u = 0.0
+
+        # --- 3) Simple hysteresis on sign changes ---
+        # If PID wants to flip sign but with small magnitude, keep coasting instead.
+        if np.sign(u) != np.sign(self._last_control) and abs(u) < self._u_switch_thresh:
+            u = 0.0
+
+        self._last_control = u
+        return u

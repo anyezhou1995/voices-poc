@@ -142,3 +142,85 @@ def gps_to_carla(lat_deg: float,
     X, Y, Z = geodetic_to_ecef(lat_deg, lon_deg, h_m)
     e, n, u = ecef_to_enu(X, Y, Z, ORIGIN)
     return enu_to_carla(e, n, u, TRANSFORM)
+
+
+R = 6378137.0  # Earth radius [m]
+
+def bsm_to_enu(lat_bsm, lon_bsm, lat_bsm_ref, lon_bsm_ref):
+    # degrees -> radians
+    lat  = math.radians(lat_bsm)
+    lon  = math.radians(lon_bsm)
+    lat0 = math.radians(lat_bsm_ref)
+    lon0 = math.radians(lon_bsm_ref)
+
+    dlat = lat - lat0
+    dlon = lon - lon0
+
+    # Local ENU approximation around the BSM frame origin
+    north = dlat * R
+    east  = dlon * R * math.cos(lat0)
+
+    return east, north
+
+def enu_to_map_latlon(east, north, lat_map_ref, lon_map_ref):
+    R = 6378137.0
+    lat0 = math.radians(lat_map_ref)
+    lon0 = math.radians(lon_map_ref)
+
+    dlat = north / R
+    dlon = east  / (R * math.cos(lat0))
+
+    lat = lat0 + dlat
+    lon = lon0 + dlon
+
+    return math.degrees(lat), math.degrees(lon)
+
+def bsm_to_real_latlon(lat_bsm, lon_bsm,
+                       lat_bsm_ref, lon_bsm_ref,
+                       lat_map_ref, lon_map_ref):
+    east, north = bsm_to_enu(lat_bsm, lon_bsm,
+                             lat_bsm_ref, lon_bsm_ref)
+    lat_real, lon_real = enu_to_map_latlon(east, north,
+                                           lat_map_ref, lon_map_ref)
+    return lat_real, lon_real
+
+def haversine(lat1, lon1, lat2, lon2):
+    # convert degrees to radians
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    return R * c
+
+def _normalize_latlon(value, is_lat=True):
+    """Normalize latitude/longitude to degrees from various integer scalings."""
+    if value is None:
+        return None
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return None
+    limit = 90.0 if is_lat else 180.0
+    if abs(v) <= limit:
+        return v
+    for scale in (1e7, 1e6, 1e5, 1e4, 1e3, 10.0):
+        candidate = v / scale
+        if abs(candidate) <= limit:
+            return candidate
+    return v
+
+def distance_real_latlon(latlongBSM, latlongMAP):
+    lat1, lon1 = latlongBSM
+    lat2, lon2 = latlongMAP
+    lat1 = _normalize_latlon(lat1, is_lat=True)
+    lon1 = _normalize_latlon(lon1, is_lat=False)
+    lat2 = _normalize_latlon(lat2, is_lat=True)
+    lon2 = _normalize_latlon(lon2, is_lat=False)
+    lat_real1, lon_real1 = bsm_to_real_latlon(lat1, lon1,
+                                               ORIGIN.lat_deg, ORIGIN.lon_deg,
+                                               lat2, lon2)
+    return haversine(lat_real1, lon_real1, lat2, lon2), (lat_real1, lon_real1)
