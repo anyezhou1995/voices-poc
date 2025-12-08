@@ -29,9 +29,6 @@ scripts/carla_python_scripts/misc
 #ignore SDSM.py because contains paid ASN1
 scripts/**/SDSM.py
 
-#ignore node_info.config
-config/node_info.config
-
 #intelliJ files
 .idea/
 
@@ -53,4 +50,12 @@ docker/build/lib/MAPS_915
 docker/build/lib/OLD
 docker/build/lib/CARLA_TFHRC
 
-# ignore SUMO pycache
+# ignore config backups
+config/site_config/*.bak
+config/scenario_config/*.bak
+
+# ignore config validation logs
+config/*.log
+
+# ignore jsonl log files
+*.jsonl

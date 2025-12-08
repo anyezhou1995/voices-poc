@@ -43,20 +43,22 @@ RUN tar -C /opt -czf /tmp/boost-runtime.tgz "$(basename ${BOOST_PREFIX})"
 USER dt_user
 WORKDIR /home/dt_user
 
+ARG TENA_VERSION="TENA-MiddlewareSDK-v6.0.9.A"
 # INSTALL TENA deb
 RUN --mount=type=bind,from=assets,source=.,target=/mnt/build,readonly \
     set -euo pipefail; \
-    dpkg -x --force-overwrite /mnt/build/TENA-MiddlewareSDK-v6.0.9.A@Product@u2204-gcc11-64-*.deb . && \
-    ar -x /mnt/build/TENA-MiddlewareSDK-v6.0.9.A@Product@u2204-gcc11-64-*.deb && \
+    dpkg -x --force-overwrite /mnt/build/${TENA_VERSION}@Product@u2204-gcc11-64-*.deb . && \
+    ar -x /mnt/build/${TENA_VERSION}@Product@u2204-gcc11-64-*.deb && \
     tar xf control.tar.* && \
     # move the postinst script into TENA dir to make it easier to copy and run later on final container
     mv ./postinst ./opt/TENA/postinst-MW 
 
+ARG DIST_VERSION="DOT_OSTR-Combined-Distribution-v1.2.3"
 # Install DT OMs
 RUN --mount=type=bind,from=assets,source=.,target=/mnt/build,readonly \
     set -euo pipefail; \
-    dpkg -x --force-overwrite /mnt/build/VUG-Combined-Distribution-v1.2.2@Product@u2204-gcc11-64-*.deb . && \
-    ar -x /mnt/build/VUG-Combined-Distribution-v1.2.2@Product@u2204-gcc11-64-*.deb && \
+    dpkg -x --force-overwrite /mnt/build/${DIST_VERSION}@Product@u2204-gcc11-64-*.deb . && \
+    ar -x /mnt/build/${DIST_VERSION}@Product@u2204-gcc11-64-*.deb && \
     tar xf control.tar.* && \
     # move the postinst script into TENA dir to make it easier to copy and run later on final container
     mv ./postinst ./opt/TENA/postinst-DIST

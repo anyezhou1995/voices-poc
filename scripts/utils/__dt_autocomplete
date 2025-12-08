@@ -18,7 +18,7 @@ __dt()
   COMPREPLY=()
   _get_comp_words_by_ref -n : cur prev
   subcmds="init config start stop ps help exec download connect disconnect"
-  config_subcmds=" print status create"
+  config_subcmds=" print set create validate update"
 
   case ${prev} in
     "config")

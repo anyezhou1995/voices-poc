@@ -5,7 +5,7 @@
   </identifier>
   <OpenDrive>
     <MapFileName name="DelaveV21.xodr">
-      <MapOrigin latitudeInDegrees="0.00841723681631434" longitudeInDegrees="0.00773563408642701" heightAboveEllipsoidInMeters="0"> </MapOrigin>
+      <MapOrigin latitudeInDegrees="39.68854712116352" longitudeInDegrees="-75.74805413881644" heightAboveEllipsoidInMeters="0"> </MapOrigin>
     </MapFileName>
   </OpenDrive>
 
@@ -114,14 +114,92 @@
   </vehicles>
 
   <intersectionSignalControllers>
-  <!--                           this should be used as identifier -->
     <intersectionSignalController name="DelAve_01" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
       <userData>
         <CARLA>
           <controllers>
-          <!--     this is spat linking, we only use ID as name isnt required  -->
-          <!--   in future, maybe we try to check for both, but just ID for now-->
             <controller name="" id="1"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_02" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="2"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_03" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="3"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_04" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="4"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_05" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="5"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_06" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="6"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_07" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="7"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+
+    <intersectionSignalController name="DelAve_09" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="9"/>
+          </controllers>      
+        </CARLA>
+      </userData>
+    </intersectionSignalController>
+
+    <intersectionSignalController name="DelAve_10" adapterType="spat-adapter" adapterName="SPAT-1" lvcIndicator="Live">
+      <userData>
+        <CARLA>
+          <controllers>
+            <controller name="" id="10"/>
           </controllers>      
         </CARLA>
       </userData>
@@ -132,17 +210,149 @@
   <!-- name of config doesnt matter, match controllerName with intersectionSignalController name  -->
     <configuration name="DelAve_01 Configuration" controllerName="DelAve_01">
       <controller name="" id="">
-        <control signalId="102" type=""> <!-- SB, Actor 135 -->
+        <control signalId="102" type="">
           <userData><phase>2</phase></userData>
         </control>
       </controller>
       <controller name="" id="">
-        <control signalId="100" type=""> <!-- NB, Actor 122 -->
+        <control signalId="100" type=""> 
+          <userData><phase>3</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="101" type=""> 
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_02 Configuration" controllerName="DelAve_02">
+      <controller name="" id="">
+        <control signalId="201" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="200" type=""> 
           <userData><phase>4</phase></userData>
         </control>
       </controller>
       <controller name="" id="">
-        <control signalId="101" type=""> <!-- WB, Actor 124 -->
+        <control signalId="202" type=""> 
+          <userData><phase>8</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_03 Configuration" controllerName="DelAve_03">
+      <controller name="" id="">
+        <control signalId="300" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_04 Configuration" controllerName="DelAve_04">
+      <controller name="" id="">
+        <control signalId="400" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="402" type=""> 
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="401" type=""> 
+          <userData><phase>8</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_05 Configuration" controllerName="DelAve_05">
+      <controller name="" id="">
+        <control signalId="500" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="501" type=""> 
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="502" type=""> 
+          <userData><phase>8</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_06 Configuration" controllerName="DelAve_06">
+      <controller name="" id="">
+        <control signalId="600" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="602" type=""> 
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="601" type=""> 
+          <userData><phase>8</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_07 Configuration" controllerName="DelAve_07">
+      <controller name="" id="">
+        <control signalId="700" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <configuration name="DelAve_09 Configuration" controllerName="DelAve_09">
+    <!-- "intersection" 8 is an visual warning ahead of intersection 9 -->
+    <!-- we are assuming that this signal head matches the behavior of intersection 9, phase 2 -->
+      <controller name="" id="">
+        <control signalId="800" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="900" type="">
+          <userData><phase>2</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="902" type=""> 
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="901" type=""> 
+          <userData><phase>3</phase></userData>
+        </control>
+      </controller>
+    </configuration>
+
+    <!-- this intersection is off of DelAve and will not be used, adding just for completenesss -->
+    <configuration name="DelAve_10 Configuration" controllerName="DelAve_10">
+      <controller name="" id="">
+        <control signalId="1001" type="">
+          <userData><phase>6</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="1000" type=""> 
+          <userData><phase>4</phase></userData>
+        </control>
+      </controller>
+      <controller name="" id="">
+        <control signalId="1002" type=""> 
           <userData><phase>8</phase></userData>
         </control>
       </controller>

@@ -2,9 +2,12 @@
 set -euo pipefail
 
 # Usage: ./fetch-assets.sh [path/to/env]
-# If no argument provided, prompt user
+# Optional: STRICT_MATCH=0 to warn instead of exit when no files match the pattern
+: "${STRICT_MATCH:=1}"
+
+# Prompt for env file if no arg; enable tab completion
 if [[ $# -eq 0 ]]; then
-  read -rp "Enter path to env file: " ENV_FILE
+  read -e -p "Enter path to env file: " ENV_FILE
 else
   ENV_FILE="$1"
 fi
@@ -22,18 +25,53 @@ if [[ -z "${BUILD_DIR:-}" ]]; then
   exit 1
 fi
 
-# ensure gdown is available
-if ! command -v gdown >/dev/null 2>&1; then
-  echo "gdown not found. Installing with pip3..."
-  if ! command -v pip3 >/dev/null 2>&1; then
-    echo "pip3 is not installed. Please install Python3 + pip3 first." >&2
+mkdir -p "$BUILD_DIR"
+
+# ---- gdown bootstrap (module form; avoids broken shebangs) ----
+export PATH="$HOME/.local/bin:$PATH"
+GDOWN="python3 -m gdown"
+if ! python3 - <<'PY' >/dev/null 2>&1
+import importlib; importlib.import_module("gdown")
+PY
+then
+  echo "Installing gdown for current Python..."
+  if command -v pip3 >/dev/null 2>&1; then
+    pip3 install --user -q gdown
+  elif python3 -m ensurepip --upgrade --user >/dev/null 2>&1; then
+    python3 -m pip install --user -q gdown
+  else
+    echo "pip3 is not available and ensurepip failed. Please install pip." >&2
     exit 1
   fi
-  pip3 install --user gdown
-  export PATH="$HOME/.local/bin:$PATH"
+  python3 - <<'PY' || { echo "gdown install failed"; exit 1; }
+import importlib; importlib.import_module("gdown")
+PY
 fi
+# ---------------------------------------------------------------
 
-mkdir -p "$BUILD_DIR"
+check_pattern_match() {
+  # Ensure at least one file in BUILD_DIR matches the pattern
+  # STRICT_MATCH=1 -> exit on failure, 0 -> warn only
+  local key="$1"
+  local pattern="$2"
+
+  shopt -s nullglob
+  # unquoted to allow glob expansion intentionally
+  # shellcheck disable=SC2086
+  local matches=( $BUILD_DIR/$pattern )
+  shopt -u nullglob
+
+  if (( ${#matches[@]} == 0 )); then
+    echo "! $key: download finished but no files match pattern '$pattern' in $BUILD_DIR" >&2
+    if [[ "$STRICT_MATCH" -eq 1 ]]; then
+      exit 1
+    else
+      return 0
+    fi
+  fi
+
+  echo "? $key: ${#matches[@]} file(s) match pattern '$pattern'"
+}
 
 download_one() {
   local key="$1"
@@ -47,13 +85,11 @@ download_one() {
   local out="${!out_var:-}"
 
   if [[ -z "$pattern" || -z "$id" ]]; then
-    echo "skipping $key  missing ${glob_var} or ${id_var} in env" >&2
+    echo "skipping $key ? missing ${glob_var} or ${id_var} in env" >&2
     return
   fi
 
-  # expand glob inside BUILD_DIR
   shopt -s nullglob
-  # NOTE: unquoted $pattern is intentional to allow glob expansion
   # shellcheck disable=SC2086
   local matches=( $BUILD_DIR/$pattern )
   shopt -u nullglob
@@ -63,18 +99,21 @@ download_one() {
     return
   fi
 
-  echo "? $key: no files matching '$pattern' in $BUILD_DIR; downloading"
+  # If OUT is set but does not match the pattern, warn early
+  if [[ -n "$out" && ! "$out" == $pattern ]]; then
+    echo "! $key: OUT '$out' does not match pattern '$pattern' (will still download)" >&2
+  fi
+
+  echo "? $key: no files matching '$pattern' in $BUILD_DIR; downloading?"
   if [[ -n "$out" ]]; then
-    # save under a specific name
-    gdown "$id" -O "$BUILD_DIR/$out"
+    $GDOWN "$id" -O "$BUILD_DIR/$out"
   else
-    # let Drive/original filename decide; download into BUILD_DIR
-    (
-      cd "$BUILD_DIR"
-      gdown "$id"
-    )
+    ( cd "$BUILD_DIR" && $GDOWN "$id" )
   fi
   echo "? $key: download complete"
+
+  # Post-download verification
+  check_pattern_match "$key" "$pattern"
 }
 
 for key in ${ASSETS:-}; do

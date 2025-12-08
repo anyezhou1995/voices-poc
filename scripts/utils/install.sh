@@ -40,6 +40,10 @@ sudo chmod ugo+x /usr/bin/dt
 sudo cp "$DT_AUTOCOMPLETE" /etc/bash_completion.d/__dt_autocomplete
 sudo chmod ugo+x /etc/bash_completion.d/__dt_autocomplete
 
+# remove old and reset autocompletion
+complete -r dt
+source /etc/bash_completion.d/__dt_autocomplete
+
 # Remove old config from previous versions
 old_config_found=0
 

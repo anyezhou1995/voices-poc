@@ -1,0 +1,12 @@
+{
+  "intersections": [
+    {"id": 1, "main_phase_groups": [2], "side_phase_groups": [3,4]},
+    {"id": 2, "main_phase_groups": [2], "side_phase_groups": [4,8]},
+    {"id": 3, "main_phase_groups": [2], "side_phase_groups": [0]},
+    {"id": 4, "main_phase_groups": [2], "side_phase_groups": [4,8]},
+    {"id": 5, "main_phase_groups": [2], "side_phase_groups": [4,8]},
+    {"id": 6, "main_phase_groups": [2], "side_phase_groups": [4,8]},
+    {"id": 7, "main_phase_groups": [2], "side_phase_groups": [0]},
+    {"id": 9, "main_phase_groups": [2], "side_phase_groups": [3,4]}
+  ]
+}

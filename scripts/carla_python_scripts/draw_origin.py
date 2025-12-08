@@ -147,6 +147,11 @@ def draw_world_axes(world,
     dbg.draw_string(end_x, " +X", False, carla.Color(255, 0, 0), float(life_time), persistent)
     dbg.draw_string(end_y, " +Y", False, carla.Color(0, 255, 0), float(life_time), persistent)
     dbg.draw_string(end_z, " +Z", False, carla.Color(0, 0, 255), float(life_time), persistent)
+    
+    print(f"Local Cartesian: {origin}")
+    print(f"Geographic: {world.get_map().transform_to_geolocation(origin)}")
+    print(f"Lat: {world.get_map().transform_to_geolocation(origin).latitude}")
+    print(f"Lat: {world.get_map().transform_to_geolocation(origin).longitude}")
 
 def follow_vehicle_axes(world, role_name, length=5.0, life_time=0.5, offset_z=2.0):
     """
@@ -188,6 +193,7 @@ try:
     client = carla.Client(args.host, args.port)
     client.set_timeout(5.0)
     world = client.get_world()
+    dbg = world.debug
     # map = world.get_map()
 
     draw_z_height = 237
@@ -202,7 +208,23 @@ try:
             }
     
     draw_world_axes(world, life_time=30)
+<<<<<<< HEAD
     follow_vehicle_axes(world, role_name="FHWA-M-3", length=8.0, life_time=0.1)
+=======
+    
+    
+    
+    int_2_center = carla.Location(x=-477.5, y=771.0, z=0.2)
+    # print(f'I2 Center: {int_2_center}')
+    int_2_center_geo = world.get_map().transform_to_geolocation(int_2_center)
+    # print(f'I2 Center Geo: {int_2_center_geo}')
+    
+    draw_world_axes(world,origin=int_2_center, life_time=5)
+    
+    # dbg.draw_string(int_2_center, "o", False, carla.Color(255, 0, 0), 5)
+    
+    follow_vehicle_axes(world, role_name="FHWA-JSON-3", length=8.0, life_time=0.1)
+>>>>>>> upstream/develop
 
 finally:
     print('\nDone!')

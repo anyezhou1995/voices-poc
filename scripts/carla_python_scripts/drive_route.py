@@ -351,7 +351,7 @@ def run_loop(world, vehicle, agent, autopilot_active, args):
             stop_text = f"Stop [SPACE]"
             train_text = f"Train [T]: {'ON' if train_mode else 'OFF'}"
             train_throttle_text = f"Train Throttle [W]"
-            train_brake_text = f"Train Breke [S]"
+            train_brake_text = f"Train Brake [S]"
             
 
             

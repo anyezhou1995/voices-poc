@@ -260,6 +260,15 @@ dt-config__create() {
     fi
 
     echo "New $type config created at: $new_config_path"
+    chmod 664 $new_config_path
+}
+
+dt-config__validate() {
+    "$VUG_LOCAL_DT_PATH/config/validate_config.py"
+}
+
+dt-config__update() {
+    "$VUG_LOCAL_DT_PATH/config/validate_config.py" --update
 }
 
 dt-config__print() {
@@ -461,6 +470,12 @@ Please enter one of the following commands:
             - walks the user through creating a site or scenario config based on the indicated 
               argument. This will prompt them to enter critial configuration but it is highly 
               reccommended to review and adjust your configuration after creation
+        validate
+            - compares the user's site and configuration files to the defaults to ensure there
+              are no additional or missing environment variables. 
+        update
+            - updates the user's configs by creating a backup of their config, copying the default,
+              and applying the user's values to the required environment variables
 
     start [docker compose up args]
         - Start the distributed testing platform
