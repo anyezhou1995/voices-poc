@@ -223,7 +223,7 @@ def process_BSM(hex_data):
             '''
             print('Lead BSM Coordinate: ', x, y, z)
             # return True, x, y, speed_converted
-            return True, lat/1e7, longstr/1e7, speed_converted
+            # return True, lat/1e7, longstr/1e7, speed_converted
         elif decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
             #print('Ego BSM Coordinate: ', x-mcity_origin['x'], y-mcity_origin['y'], z)
             print('Ego BSM Coordinate no offset: ', x, y, z)
@@ -600,7 +600,7 @@ def determine_signal_phase_from_map(ego_location, ego_latlong, map_message=None,
             try:
                 decoded = J2735.DSRC.MessageFrame
                 decoded.from_uper(ba.unhexlify(payload))
-                print(str(decoded.to_json()) + "\n")
+                # print(str(decoded.to_json()) + "\n")
                 return decoded()
             except Exception:
                 return None
@@ -883,7 +883,7 @@ def determine_signal_phase_from_map(ego_location, ego_latlong, map_message=None,
 
     return None
 
-def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_heading=None, max_search_distance=150.0):
+def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_heading=None, max_search_distance=100.0):
     """Determine the MAP signal group using only lat/lon values (no CARLA XY conversion).
 
     Parameters
@@ -917,6 +917,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
             try:
                 decoded = J2735.DSRC.MessageFrame
                 decoded.from_uper(ba.unhexlify(payload))
+                # print(str(decoded.to_json()) + "\n")
                 return decoded()
             except Exception:
                 return None
@@ -1091,7 +1092,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
                 continue
         candidate_list.append((dist_to_intersection, intersection, ref_geo, ego_latlon_real))
 
-    #print('## [DEBUG] Intersection candidates: ', len(candidate_list))
+    print('## [DEBUG] Intersection candidates: ', len(candidate_list))
 
     if not candidate_list:
         if _cached_map_state.get('last_match_latlon') is not None:
@@ -1103,7 +1104,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
     candidate_list.sort(key=lambda item: item[0])
     target_distance, target_intersection, target_geo, target_ego_latlon_real = candidate_list[0]
 
-    print('## [DEBUG] Ego original lat lon: ', ego_lat, ego_lon, target_geo)
+    #print('## [DEBUG] Ego original lat lon: ', ego_lat, ego_lon, target_geo)
     print('## [DEBUG] Candidate metrics: ', target_distance, target_ego_latlon_real)
 
     best_match = None
@@ -1126,9 +1127,9 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         if len(lane_points) < 2:
             continue
         distance = _point_to_polyline_distance_latlon(target_ego_latlon_real, lane_points)
-        print('## [DEBUG] Lateral distance: ', distance)
-        # if distance > max_search_distance:
-        #     continue
+        # print('## [DEBUG] Lateral distance: ', distance)
+        if distance > max_search_distance:
+            continue
         if best_match is None or distance < best_match['distance']:
             best_match = {
                 'signal_group': signal_groups[0],
@@ -1245,9 +1246,9 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         lat, lon, elev = core_data.get('lat'), core_data.get('long'), core_data.get('elev')  # Extract from core_data
         bsm_xy = _latlon_to_local_xy(lat/1e7, lon/1e7, elev/10)  # Convert lat/lon to local XY
         bsm_heading = 90 - core_data.get('heading') * 0.0125  # Extract heading
-        print("[DEBUG] BSM LatLonElev: ", lat, lon, elev)
-        print("[DEBUG] BSM Coordinate: ", bsm_xy)
-        print("[DEBUG] Carla Coordinate: ", carla_info['pos_ego'])
+        # print("[DEBUG] BSM LatLonElev: ", lat, lon, elev)
+        # print("[DEBUG] BSM Coordinate: ", bsm_xy)
+        # print("[DEBUG] Carla Coordinate: ", carla_info['pos_ego'])
         bsm_speed = core_data.get('speed') * 0.02  # Extract speed in m/s
         _cached_vehicles[bsm_id] = {
             'position': bsm_xy,

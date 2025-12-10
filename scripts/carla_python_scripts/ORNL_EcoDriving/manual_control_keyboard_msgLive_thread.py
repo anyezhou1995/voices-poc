@@ -1198,7 +1198,7 @@ logger = logging.getLogger(__name__)
 #####################################
 
 def receive_loop():
-    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, hex_data, map_info, intersection_id, logger
+    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger
     try:
         # Set the UDP specs
         UDP_IP = "10.7.153.56" ##"10.7.108.81"
@@ -1212,27 +1212,32 @@ def receive_loop():
         # Set a SPaT data to continue running the car
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
+        SPaT_Record = {str(i): spatCache for i in range(1, 10)}
 
         while True:
             if shutdown.is_set():
                 break
 
+            # with info_lock:
             data, addr = sock.recvfrom(4096)
             #print(f"[Receive] Packet received from {addr}, length: {len(data)} bytes")
-            logger.info(f"Packet received from {addr}, length: {len(data)} bytes")
+            # logger.info(f"Packet received from {addr}, length: {len(data)} bytes")
             hex_data = data.hex()
-            with info_lock:
-                ## first receive to get SPaT
-                #map_info = decode_map(hex_data)
-                SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data)
 
-                ## second receive to get BSM
-                #data, addr = sock.recvfrom(4096)
-                #hex_data = data.hex()
+            ## first receive to get SPaT
+            #map_info = decode_map(hex_data)
+            SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data)
+            if SPaT_flag:
+                logger.info(f'**************** SPaT data updated for {str(intersection_id)}: {spatCache}')
+                SPaT_Record[str(intersection_id)] = spatInfo
 
-                BSM_flag, x1, y1, speed = process_BSM(hex_data)
-                # if BSM_flag:
-                #     print('BSM for leader: ', BSM_flag, x1, y1, speed)
+            ## second receive to get BSM
+            #data, addr = sock.recvfrom(4096)
+            #hex_data = data.hex()
+
+            BSM_flag, x1, y1, speed = process_BSM(hex_data)
+            # if BSM_flag:
+            #     print('BSM for leader: ', BSM_flag, x1, y1, speed)
 
     except Exception as e:
         #print(f"[Receive] Exception: {e}")
@@ -1248,7 +1253,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
-    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, vehicle_logger, intersection_id, logger, RefSpd
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd
     pygame.init()
     pygame.font.init()
     world = None
@@ -1261,6 +1266,8 @@ def game_loop(args):
     pass_or_not = 0
     last_dist2bar = 1e6
     record_freq = 2
+
+    speed_lead = 10
 
     cache_time, last_loop_time = datetime.datetime.now().timestamp(), 0
     wp_id_cache, wp_id = 0, 0
@@ -1304,160 +1311,167 @@ def game_loop(args):
             actor_list = world.world.get_actors()
             actor_list = actor_list.filter('vehicle.*')
 
-            with info_lock:
-                if BSM_flag is True:
-                    speed_cache = speed
+            #with info_lock:
+            # SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data)
+            # BSM_flag, x1, y1, speed = process_BSM(hex_data)
+
+            if BSM_flag is True:
+                speed_cache = speed
+            else:
+                speed = speed_cache
+            if spatInfo:
+                spatCache = spatInfo
+
+            ## Hardcoded FHWA vehicle as the leader
+            for actor in actor_list:
+                #print(actor.id, actor.type_id)
+                #if actor.type_id == 'vehicle.toyota.prius':
+                if actor.attributes['role_name'] == 'FHWA-M-3':
+                    # Use actual name
+                    ref_trans1 = actor.get_transform()
+                    x, y = ref_trans1.location.x, ref_trans1.location.y
+                    ref_rotation = actor.get_transform().rotation
+                    speed_lead = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
+                    #print(actor.attributes)
+                    #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
+                    break
+
+            ## Compute info for speed planning
+            speed = speed_lead  ##### Just a fake value to run
+            x_ego, y_ego, z_ego = world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z
+            speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
+            accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
+            spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 5
+            # spacing_bsm = np.sqrt((x1-x_ego)**2 + (y1-y_ego)**2) - 5
+            #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
+            dist2bar = 500      ##### Just a fake value to run
+            speed_diff = speed - speed_ego
+            carla_info = {'pos_ego': (x_ego, y_ego, z_ego), 'spacing': spacing, 'heading': world.player.get_transform().rotation.yaw, 'speed_ego': speed_ego,
+                        'pos_lead': (x, y), 'heading_lead': ref_rotation.yaw, 'speed_lead': speed}
+
+            this_loop_time = datetime.datetime.now().timestamp()
+            distance_traveled += speed_ego * (this_loop_time - last_loop_time)
+            last_loop_time = this_loop_time
+
+            closest_intersection_id_carla, closest_intersection_dist = get_closest_intersection_carla(world.player.get_transform())
+
+            vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6])
+
+            #print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
+            #print('Carla spacing: ', spacing, ' BSM spacing: ', spacing_bsm)
+
+            try:
+                best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
+                if best_leader:
+                    #logger.info('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                    #print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                    print("Update leader info from BSM!")
                 else:
-                    speed = speed_cache
-                if spatInfo:
-                    spatCache = spatInfo
+                    logger.warning('No leader found from BSM, using cached values')
+                    best_leader = {'distance': 30, 'lead_speed': 15}
+            except Exception as e:
+                logger.error(f"[Carla] Finding leader exception: {e}")
+                #best_leader = None
+                best_leader = {'distance': 30, 'lead_speed': 15}
 
-                ## Hardcoded FHWA vehicle as the leader
-                for actor in actor_list:
-                    #print(actor.id, actor.type_id)
-                    #if actor.type_id == 'vehicle.toyota.prius':
-                    if actor.attributes['role_name'] == 'FHWA-M-3':
-                        # Use actual name
-                        ref_trans1 = actor.get_transform()
-                        x, y = ref_trans1.location.x, ref_trans1.location.y
-                        ref_rotation = actor.get_transform().rotation
-                        speed_lead = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2)
-                        #print(actor.attributes)
-                        #print('From carla speed: ', np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2))
-                        break
+            try:
+                #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                if best_phase:
+                    #logger.info(f'################Best signal phase from MAP: {best_phase}')
+                    # print("################# Update phase group info from MAP! ", best_phase)
+                    closest_intersection_id, best_SG_id = best_phase['intersection_id'], best_phase['signal_group']
+                else:
+                    logger.warning('No updated signal phase group from MAP.')
+            except Exception as e:
+                logger.error(f"[Carla] Finding signal phase exception: {e}")
+                best_phase = None
+            #logger.info('Best phase: ', best_phase)
 
-                ## Compute info for speed planning
-                speed = speed_lead = 20  ##### Just a fake value to run
-                x_ego, y_ego, z_ego = world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z
-                speed_ego = np.sqrt(world.player.get_velocity().x**2 + world.player.get_velocity().y**2)
-                accel_ego = np.sqrt(world.player.get_acceleration().x**2 + world.player.get_acceleration().y**2)
-                spacing = np.sqrt((x-x_ego)**2 + (y-y_ego)**2) - 5
-                # spacing_bsm = np.sqrt((x1-x_ego)**2 + (y1-y_ego)**2) - 5
-                #dist2bar = np.sqrt((barPos_x-x_ego)**2 + (barPos_y-y_ego)**2) - 3.5
-                dist2bar = 500      ##### Just a fake value to run
-                speed_diff = speed - speed_ego
-                carla_info = {'pos_ego': (x_ego, y_ego, z_ego), 'spacing': spacing, 'heading': world.player.get_transform().rotation.yaw, 'speed_ego': speed_ego,
-                            'pos_lead': (x, y), 'heading_lead': ref_rotation.yaw, 'speed_lead': speed}
+            # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
+            # print('Leader Carla Coordinate: ', x, y)
 
-                this_loop_time = datetime.datetime.now().timestamp()
-                distance_traveled += speed_ego * (this_loop_time - last_loop_time)
-                last_loop_time = this_loop_time
+            ## Too large spacing set to nan
+            # if spacing > 75 or np.isnan(speed):
+            #     speed = np.nan
+            #     spacing = np.nan
 
-                closest_intersection_id, closest_intersection_dist = get_closest_intersection_carla(world.player.get_transform())
+            ## Pass intersection stop bar or not    
+            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id is '5':
+                pass_or_not = 1
 
-                vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6])
+            logger.info(f'Closest ID Carla: {closest_intersection_id_carla}, {type(closest_intersection_id_carla)},  Closest ID: {closest_intersection_id}, {type(closest_intersection_id)}')
+            
+            int_intersect_id = max(int(closest_intersection_id_carla), int(closest_intersection_id))
+            spatCache = SPaT_Record.get(str(int_intersect_id), spatCache)
+            ## Record latest spat just in case
+            # if str(intersection_id) == closest_intersection_id:
+            #     spatCache = spatInfo
+            #     logger.info(f'**************** SPaT data updated: {spatCache}')
+                #logger.info('SPaT data updated for speed planning.')
+                #print(spatInfo)
+            # else:
+            #     logger.warning("Using previous SPaT data for speed planning.")
+                #print('########################## Use previous SPaT! ##########################')
 
-                #print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
-                #print('Carla spacing: ', spacing, ' BSM spacing: ', spacing_bsm)
+            try:
+                ## update reference speed every 0.2 secs
+                current_update_time = datetime.datetime.now().timestamp()
+                dt = current_update_time - cache_time
 
-                try:
-                    best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
-                    if best_leader:
-                        #logger.info('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                        #print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                        print("Update leader info from BSM!")
+                #print(speed_ego, accel_ego, dist2bar, speed, spacing, pass_or_not, reference_timestamp, spatCache)
+
+                if dt >= 0.2:
+                    ##if approaching intersection, use eco-approaching algorithm
+                    if not pass_or_not:
+                        # RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (closest_intersection_dist-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
+                        # logger.info('Use the latest SPaT to update eco-driving speed!')
+                    ##if passed intersection, use CF model
                     else:
-                        logger.warning('No leader found from BSM, using cached values')
-                except Exception as e:
-                    logger.error(f"[Carla] Finding leader exception: {e}")
-                    #best_leader = None
-                    best_leader = {'distance': 50, 'lead_speed': 30}
+                        logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
+                        # _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
+                        _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
+                    RefSpd = min(40, RefSpd)
+                    cache_time = datetime.datetime.now().timestamp()
+            except Exception as e:
+                logger.error(f"[Carla] Speed planning exception: {e}")
+                logger.info('Cannot get advisory speed! Set to speed limit!')
+                #print(f"[Carla] Speed planning exception: {e}")
+                #print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
+                RefSpd = 40
 
-                try:
-                    #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
-                    best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
-                    if best_phase:
-                        #logger.info(f'################Best signal phase from MAP: {best_phase}')
-                        print("################# Update phase group info from MAP! ", best_phase)
-                        closest_intersection_id, best_SG_id = best_phase['intersection_id'], best_phase['signal_group']
-                    else:
-                        logger.warning('No updated signal phase group from MAP.')
-                except Exception as e:
-                    logger.error(f"[Carla] Finding signal phase exception: {e}")
-                    best_phase = None
-                #logger.info('Best phase: ', best_phase)
+            #print('At time: ', reference_timestamp)
+            #print(spatCache)
+            #print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
+            #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
+            
+            #print(controller.eco_drive)
 
-                # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
-                # print('Leader Carla Coordinate: ', x, y)
+            ## To compensate early start in recorded testing scenario
+            #if spacing >= 2 and speed_diff >= 1 and RefSpd<=0.1:
+                #RefSpd = speed*3.6/1.6
 
-                ## Too large spacing set to nan
-                # if spacing > 75 or np.isnan(speed):
-                #     speed = np.nan
-                #     spacing = np.nan
+            ## Get the desired waypoint
+            if controller.eco_drive:
+                #wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
+                wp_id = search_target_index_v2(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6, c_distance, distance_traveled)
+                #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
+            
+            #print('########### wp id: ' + str(wp_id))
+            ## get the reference transformation
+            ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],float(cz[wp_id])), ref_rotation)
+            
+            ## Compute the desired reference speed in km per hr
+            speed2go = RefSpd*1.6
+            ## collision consideration
+            if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
+                #controller._control.brake = 0.99
+                speed2go = 0
 
-                ## Pass intersection stop bar or not    
-                if controller.eco_drive and pass_or_not == 0 and closest_intersection_id is '5':
-                    pass_or_not = 1
-
-                logger.info(f'SPaT Intersection: {intersection_id}, {type(intersection_id)},  Closest ID: {closest_intersection_id}, {type(closest_intersection_id)}')
-                ## Record latest spat just in case
-                if str(intersection_id) == closest_intersection_id:
-                    spatCache = spatInfo
-                    logger.info(f'######## SPaT data updated: {spatCache} ########')
-                    #logger.info('SPaT data updated for speed planning.')
-                    #print(spatInfo)
-                # else:
-                #     logger.warning("Using previous SPaT data for speed planning.")
-                    #print('########################## Use previous SPaT! ##########################')
-
-                try:
-                    ## update reference speed every 0.2 secs
-                    current_update_time = datetime.datetime.now().timestamp()
-                    dt = current_update_time - cache_time
-
-                    #print(speed_ego, accel_ego, dist2bar, speed, spacing, pass_or_not, reference_timestamp, spatCache)
-
-                    if dt >= 0.2:
-                        ##if approaching intersection, use eco-approaching algorithm
-                        if not pass_or_not:
-                            RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                            # RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
-                            # logger.info('Use the latest SPaT to update eco-driving speed!')
-                        ##if passed intersection, use CF model
-                        else:
-                            logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
-                            _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
-                            # _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
-                        RefSpd = min(40, RefSpd)
-                        cache_time = datetime.datetime.now().timestamp()
-                except Exception as e:
-                    logger.error(f"[Carla] Speed planning exception: {e}")
-                    logger.info('Cannot get advisory speed! Set to speed limit!')
-                    #print(f"[Carla] Speed planning exception: {e}")
-                    #print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
-                    RefSpd = 40
-
-                #print('At time: ', reference_timestamp)
-                #print(spatCache)
-                #print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
-                #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
-                
-                #print(controller.eco_drive)
-
-                ## To compensate early start in recorded testing scenario
-                #if spacing >= 2 and speed_diff >= 1 and RefSpd<=0.1:
-                    #RefSpd = speed*3.6/1.6
-
-                ## Get the desired waypoint
-                if controller.eco_drive:
-                    #wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
-                    wp_id = search_target_index_v2(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6, c_distance, distance_traveled)
-                    #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
-                
-                #print('########### wp id: ' + str(wp_id))
-                ## get the reference transformation
-                ref_trans = carla.Transform(carla.Location(cx[wp_id],cy[wp_id],float(cz[wp_id])), ref_rotation)
-                
-                ## Compute the desired reference speed in km per hr
-                speed2go = RefSpd*1.6
-                ## collision consideration
-                if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
-                    #controller._control.brake = 0.99
-                    speed2go = 0
-
-                ## Controller execution
-                if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
-                    return
+            ## Controller execution
+            if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
+                return
 
             #print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
             #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
