@@ -335,14 +335,49 @@ ltpENU_field_mappings = {
     "yaw":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes","rotZinRadians"],
     "pitch":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes","rotYinRadians"],
     "roll":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes","rotXinRadians"],
-    # Map Origin Fields
-    "latitudeDeg":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "latitudeInDegrees"],
-    "longitudeDeg":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "longitudeInDegrees"],
-    "heightAbvEllip":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "heightAboveEllipsoidInMeters"],
-    "azimuth":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "azimuthInRadians"],
-    "xFalseOrigin":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "xFalseOriginInMeters"],
-    "yFalseOrigin":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "yFalseOriginInMeters"]
 }
+
+position_srf_field_mappings = {
+    # Map Origin Fields
+    "srf_p_latitudeDeg":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "latitudeInDegrees"],
+    "srf_p_longitudeDeg":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "longitudeInDegrees"],
+    "srf_p_heightAbvEllip":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "heightAboveEllipsoidInMeters"],
+    "srf_p_azimuth":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "azimuthInRadians"],
+    "srf_p_xFalseOrigin":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "xFalseOriginInMeters"],
+    "srf_p_yFalseOrigin":["attributes", "tspi", "attributes", "position", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "yFalseOriginInMeters"] 
+}
+
+orientation_srf_field_mappings = {
+    # Map Origin Fields
+    "srf_o_latitudeDeg":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes", "srf", "attributes", "latitudeInDegrees"],
+    "srf_o_longitudeDeg":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes", "srf", "attributes", "longitudeInDegrees"],
+    "srf_o_heightAbvEllip":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes", "srf", "attributes", "heightAboveEllipsoidInMeters"],
+    "srf_o_azimuth":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes", "srf", "attributes", "azimuthInRadians"],
+    "srf_o_xFalseOrigin":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes", "srf", "attributes", "xFalseOriginInMeters"],
+    "srf_o_yFalseOrigin":["attributes", "tspi", "attributes", "orientation", "attributes", "frdWRTltpENUbodyFixedZYX_asTransmitted", "attributes", "srf", "attributes", "yFalseOriginInMeters"] 
+}
+
+velocity_srf_field_mappings = {
+    # Map Origin Fields
+    "srf_v_latitudeDeg":["attributes", "tspi", "attributes", "velocity", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "latitudeInDegrees"],
+    "srf_v_longitudeDeg":["attributes", "tspi", "attributes", "velocity", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "longitudeInDegrees"],
+    "srf_v_heightAbvEllip":["attributes", "tspi", "attributes", "velocity", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "heightAboveEllipsoidInMeters"],
+    "srf_v_azimuth":["attributes", "tspi", "attributes", "velocity", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "azimuthInRadians"],
+    "srf_v_xFalseOrigin":["attributes", "tspi", "attributes", "velocity", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "srf_v_xFalseOriginInMeters"],
+    "srf_v_yFalseOrigin":["attributes", "tspi", "attributes", "velocity", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "yFalseOriginInMeters"] 
+}
+
+acceleration_srf_field_mappings = {
+    # Map Origin Fields
+    "srf_a_latitudeDeg":["attributes", "tspi", "attributes", "acceleration", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "latitudeInDegrees"],
+    "srf_a_longitudeDeg":["attributes", "tspi", "attributes", "acceleration", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "longitudeInDegrees"],
+    "srf_a_heightAbvEllip":["attributes", "tspi", "attributes", "acceleration", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "heightAboveEllipsoidInMeters"],
+    "srf_a_azimuth":["attributes", "tspi", "attributes", "acceleration", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "azimuthInRadians"],
+    "srf_a_xFalseOrigin":["attributes", "tspi", "attributes", "acceleration", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "xFalseOriginInMeters"],
+    "srf_a_yFalseOrigin":["attributes", "tspi", "attributes", "acceleration", "attributes", "ltpENU_asTransmitted", "attributes", "srf", "attributes", "yFalseOriginInMeters"] 
+}
+
+
 
 # Maps object data keys to paths in the geocentric tspi template
 geocentric_field_mappings = {
@@ -525,7 +560,16 @@ def pack_object_data_into_json(object_data_list, entityMap, map_origin, coordina
     logging.debug(f"Using {coordinate_format} tspi template and field mappings for all objects")
     if coordinate_format == "ltpENU":
         tspi_template = ltpENU_tspi_template
-        tspi_field_map = ltpENU_field_mappings
+        # check if vx, vy, and vz exist in any of the data objects
+        tspi_field_map = {**ltpENU_field_mappings,**position_srf_field_mappings, **orientation_srf_field_mappings}
+        has_vel = all(all(k in obj for k in ("vx", "vy", "vz")) for obj in object_data_list)
+        has_accel = all(all(k in obj for k in ("ax", "ay", "az")) for obj in object_data_list)
+        if has_vel:
+            tspi_field_map |= velocity_srf_field_mappings
+        if has_accel:
+            tspi_field_map |= acceleration_srf_field_mappings
+
+
     elif coordinate_format == "geocentric":
         tspi_template = geocentric_tspi_template
         tspi_field_map = geocentric_field_mappings
@@ -541,7 +585,27 @@ def pack_object_data_into_json(object_data_list, entityMap, map_origin, coordina
         if not validate_object(object_data):
             continue
         # Add map origin to the object_data, and determine the type of object
-        object_data = {**object_data, **map_origin}
+        # object_data = {**object_data, **map_origin}
+
+        srf_key_map = {
+            "latitudeDeg": ("srf_p_latitudeDeg","srf_o_latitudeDeg","srf_v_latitudeDeg","srf_a_latitudeDeg"),
+            "longitudeDeg": ("srf_p_longitudeDeg","srf_o_longitudeDeg","srf_v_longitudeDeg","srf_a_longitudeDeg"),
+            "heightAbvEllip": ("srf_p_heightAbvEllip","srf_o_heightAbvEllip","srf_v_heightAbvEllip","srf_a_heightAbvEllip"),
+            "azimuth": ("srf_p_azimuth","srf_o_azimuth","srf_v_azimuth","srf_a_azimuth"),
+            "xFalseOrigin": ("srf_p_xFalseOrigin","srf_o_xFalseOrigin","srf_v_xFalseOrigin","srf_a_xFalseOrigin"),
+            "yFalseOrigin": ("srf_p_yFalseOrigin","srf_o_yFalseOrigin","srf_v_yFalseOrigin","srf_a_yFalseOrigin"),
+        }
+        for origin_key, srf_keys in srf_key_map.items():
+            if origin_key not in map_origin:
+                logging.warning(f"Map origin missing: {origin_key}")
+                continue
+            for srf_key in srf_keys:
+                if srf_key in tspi_field_map:  # only if that mapping is active
+                    object_data[srf_key] = map_origin[origin_key]
+
+        logging.debug(f'object_data: {object_data}')
+
+
         object_type = object_data["object_type"]
         
         # Determines which object template to use for the current object

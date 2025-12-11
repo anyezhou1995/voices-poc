@@ -3,7 +3,7 @@ import time
 import json
 import socket
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import argparse
 from argparse import RawTextHelpFormatter
 
@@ -18,7 +18,7 @@ def compute_moy_and_time_mark():
       - Minute of year (moy)
       - TimeMark in 0.1s units from the top of the current UTC hour (0..35999)
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Minute of year (unchanged)
     moy = ((now.timetuple().tm_yday - 1) * 24 * 60) + now.hour * 60 + now.minute
@@ -420,11 +420,11 @@ def main():
             moy, time_mark = compute_moy_and_time_mark()
 
             debug_info = {
-                "timestamp": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
-                "main_state": main_state,
-                "main_remaining": round(main_rem, 2),
-                "side_state": side_state,
-                "side_remaining": round(side_rem, 2),
+                "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3],
+            "main_state": main_state,
+            "main_remaining": round(main_rem, 2),
+            "side_state": side_state,
+            "side_remaining": round(side_rem, 2),
             }
 
             # Build, encode, log, and send for each intersection

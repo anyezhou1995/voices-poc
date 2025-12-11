@@ -214,13 +214,6 @@ if [[ $VUG_DOCKER_START_V2X_ADAPTER == true ]]; then
    sleep 5s
 fi
 
-if [[ $VUG_DOCKER_START_TRAFFIC_LIGHT_EG == true ]]; then
-   echo "STARTING TENA TRAFFIC LIGHT ENTITY GENERATOR"
-   $HOME/distributed-testing/scripts/run_scripts/start-traffic-light-entity-generator.sh &
-
-   sleep 5s
-fi
-
 if [[ $VUG_DOCKER_START_ENTITY_GENERATOR == true ]]; then
    echo "STARTING TENA ENTITY GENERATOR"
    $HOME/distributed-testing/scripts/run_scripts/start-entity-generator.sh &
