@@ -13,7 +13,7 @@ import math, sys
 import numpy as np
 
 from find_carla_egg import find_carla_egg
-from gps2carla import gps_to_carla, GpsOrigin, CarlaTransform, distance_real_latlon
+from gps2carla import gps_to_carla, GpsOrigin, CarlaTransform, distance_real_latlon, distances_to_heading
 from mapOffset import GpsCarlaPair, calibrate_enu_to_carla
 
 carla_egg_file = find_carla_egg()
@@ -481,8 +481,8 @@ def _latlon_to_local_xy(lat_deg, lon_deg, elevation_m=0.0):
     #xyz = GeodeticToEcef(lat_deg, lon_deg, elevation_m)
     x, y, z = gps_to_carla(lat_deg, lon_deg, elevation_m)
     #return xyz['x'] - mcity_origin['x'], -xyz['y'] + mcity_origin['y']
-    # return x, y
-    return y, -x
+    return x, y
+    # return y, -x
 
 def _extract_lat_lon(record):
     """ Extract lat, lon, elevation from a record.
@@ -917,7 +917,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
             try:
                 decoded = J2735.DSRC.MessageFrame
                 decoded.from_uper(ba.unhexlify(payload))
-                # print(str(decoded.to_json()) + "\n")
+                # print("######### Get MAP", str(decoded.to_json()) + "\n")
                 return decoded()
             except Exception:
                 return None
@@ -1049,6 +1049,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         return None
 
     map_body = decoded_map.get('value') if isinstance(decoded_map, dict) else None
+    # print('## [DEBUG] decoded MAP body: ', map_body)
     if isinstance(map_body, (list, tuple)) and len(map_body) > 1:
         map_body = map_body[1]
     if not isinstance(map_body, dict):
@@ -1059,6 +1060,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         return None
 
     intersections = map_body.get('intersections', [])
+    print('## [DEBUG]', ' Intersections found in MAP message: ', len(intersections))
     if intersections:
         for intersection in intersections:
             ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
@@ -1083,6 +1085,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         intersection = cached['intersection']
         ref_geo = cached['geo']
         dist_to_intersection, ego_latlon_real = distance_real_latlon((ego_lat, ego_lon), (ref_geo[0], ref_geo[1]))
+        print('## [DEBUG] Intersection loc info: ', ref_geo, dist_to_intersection, ego_latlon_real)
         if dist_to_intersection < 1.0:
             continue
         if heading_vec is not None:
@@ -1258,7 +1261,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         }
         ## debug use, use ego BSM to set ego position
         ego_xy = _cached_vehicles['f03ad658']['position'] if 'f03ad658' in _cached_vehicles.keys() else ego_xy
-        ego_heading = _cached_vehicles['f03ad658']['heading'] if 'f03ad658' in _cached_vehicles.keys() else 9999
+        ego_heading = _cached_vehicles['f03ad658']['heading'] if 'f03ad658' in _cached_vehicles.keys() else 20
         lead_heading = _cached_vehicles['f03ad628']['heading'] if 'f03ad628' in _cached_vehicles.keys() else 9999
         #print(f"Ego heading BSM: {ego_heading}, Ego heading Carla: {carla_info['heading']}")
         #print(f"Lead heading BSM: {lead_heading}, Ego heading Carla: {carla_info['heading_lead']}")
@@ -1295,7 +1298,8 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         vehicle_speed = cached['speed']
         vec_to_vehicle = np.array(vehicle_xy) - ego_xy_vec
         dist_to_vehicle = np.linalg.norm(vec_to_vehicle)
-        if dist_to_vehicle < 1.0:
+        _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_heading, vehicle_xy[0], vehicle_xy[1])
+        if dist_to_vehicle < 1.0 or abs_d_perp >= 2.1:
             continue
         if heading_vec is not None:
             #print("Heading Vec:", heading_vec, "heading angle: ", ego_heading)
@@ -1479,8 +1483,8 @@ def search_target_index_v2(cx, cy, veh_trans, desired_speed, distance, distance_
     def look_ahead_idx_from(closest_index):
         target_index = closest_index
 
-        look_ahead_dis = 1.*desired_speed + 0
-        #look_ahead_dis = 4.5
+        # look_ahead_dis = 1.*desired_speed + 0
+        look_ahead_dis = 4
         while look_ahead_dis > np.hypot(cx[target_index]-veh_trans.location.x, cy[target_index]-veh_trans.location.y):
             if (target_index + 1) >= len(cx) or desired_speed < 0.1:
                 break
@@ -1545,7 +1549,11 @@ INTERSECTION_XY = {
     '2': (-487.62, 771.05),
     '3': (-381.11, 760.60),
     '4': (-133.25, 734.62),
-    '5': (53.89, 713.76)
+    '5': (53.89, 713.76),
+    '6': (231.28, 709.92),
+    '7': (360.30, 720.24),
+    '8': (475.90, 802.15),
+    '9': (530.47, 843.83)
 }
 
 def get_closest_intersection_carla(ego_location, ego_heading=None):
@@ -1564,9 +1572,9 @@ def get_closest_intersection_carla(ego_location, ego_heading=None):
     ego_xy = _location_to_xy(ego_location)
     heading_vec = _heading_vector(ego_location)
     if ego_xy is None:
-        return '5', None
+        return list(INTERSECTION_XY.keys())[-1], None
     min_dist = float('inf')
-    closest_id, closest_xy = '5', None
+    closest_id, closest_xy = list(INTERSECTION_XY.keys())[-1], None
     for inter_id, inter_xy in INTERSECTION_XY.items():
         vec_to_vehicle = np.array(inter_xy) - np.array(ego_xy)
         forward_component = np.dot(vec_to_vehicle, heading_vec)

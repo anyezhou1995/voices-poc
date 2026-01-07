@@ -1172,6 +1172,7 @@ RefSpd, ref_cache = 0, 0
 speed, speed_cache = 0, 0
 x, y = 0, 0
 x1, y1 = 0, 0
+ego_lat, ego_long = 0, 0
 spatInfo = map_info = {}
 SPaT_flag, BSM_flag = False, False
 
@@ -1198,7 +1199,7 @@ logger = logging.getLogger(__name__)
 #####################################
 
 def receive_loop():
-    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger
+    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger, ego_lat, ego_long
     try:
         # Set the UDP specs
         UDP_IP = "10.7.153.56" ##"10.7.108.81"
@@ -1236,8 +1237,9 @@ def receive_loop():
             #hex_data = data.hex()
 
             BSM_flag, x1, y1, speed = process_BSM(hex_data)
-            # if BSM_flag:
-            #     print('BSM for leader: ', BSM_flag, x1, y1, speed)
+            if BSM_flag:
+                ego_lat, ego_long = x1, y1
+                print('BSM return: ', BSM_flag, x1, y1, speed)
 
     except Exception as e:
         #print(f"[Receive] Exception: {e}")
@@ -1253,7 +1255,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
-    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd, ego_lat, ego_long
     pygame.init()
     pygame.font.init()
     world = None
@@ -1271,14 +1273,14 @@ def game_loop(args):
 
     cache_time, last_loop_time = datetime.datetime.now().timestamp(), 0
     wp_id_cache, wp_id = 0, 0
-    distance_traveled = 0
     reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
 
     df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
     cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
     c_pitch, c_yaw, c_roll = df_waypoints['pitch'].to_numpy(), df_waypoints['yaw'].to_numpy(), df_waypoints['roll'].to_numpy()
     c_distance = df_waypoints['distance_traveled_m'].to_numpy()
-    spawn_pos = carla.Transform(carla.Location(x=cx[0], y=cy[0], z=3.0), carla.Rotation(pitch=0.0, yaw=21, roll=0.0))
+    spawn_pos = carla.Transform(carla.Location(x=-726.36, y=740.29, z=3.0), carla.Rotation(pitch=0.0, yaw=18, roll=0.0))
+    distance_traveled = np.hypot(spawn_pos.location.x - cx[0], spawn_pos.location.y - cy[0])
 
     best_phase = None
     closest_intersection_id, best_SG_id = '9', '2'
@@ -1364,19 +1366,19 @@ def game_loop(args):
                 best_leader = determine_leader(world.player.get_transform().location, bsm_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw, carla_info=carla_info)
                 if best_leader:
                     #logger.info('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                    #print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
-                    print("Update leader info from BSM!")
+                    print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
+                    # print("Update leader info from BSM!")
                 else:
                     logger.warning('No leader found from BSM, using cached values')
-                    best_leader = {'distance': 30, 'lead_speed': 15}
+                    best_leader = {'distance': 60, 'lead_speed': 30}
             except Exception as e:
                 logger.error(f"[Carla] Finding leader exception: {e}")
                 #best_leader = None
-                best_leader = {'distance': 30, 'lead_speed': 15}
+                best_leader = {'distance': 60, 'lead_speed': 30}
 
             try:
                 #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
-                best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
+                best_phase = determine_signal_phase_from_map_latlon(ego_latlon=(ego_lat, ego_long), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
                 if best_phase:
                     #logger.info(f'################Best signal phase from MAP: {best_phase}')
                     # print("################# Update phase group info from MAP! ", best_phase)
@@ -1397,7 +1399,7 @@ def game_loop(args):
             #     spacing = np.nan
 
             ## Pass intersection stop bar or not    
-            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id is '5':
+            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id is '9':
                 pass_or_not = 1
 
             logger.info(f'Closest ID Carla: {closest_intersection_id_carla}, {type(closest_intersection_id_carla)},  Closest ID: {closest_intersection_id}, {type(closest_intersection_id)}')
@@ -1432,18 +1434,18 @@ def game_loop(args):
                         logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
                         # _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
                         _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
-                    RefSpd = min(40, RefSpd)
+                    RefSpd = min(30, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
             except Exception as e:
                 logger.error(f"[Carla] Speed planning exception: {e}")
                 logger.info('Cannot get advisory speed! Set to speed limit!')
                 #print(f"[Carla] Speed planning exception: {e}")
                 #print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
-                RefSpd = 40
+                RefSpd = 30
 
             #print('At time: ', reference_timestamp)
             #print(spatCache)
-            #print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
+            print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
             #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
             
             #print(controller.eco_drive)
@@ -1454,8 +1456,8 @@ def game_loop(args):
 
             ## Get the desired waypoint
             if controller.eco_drive:
-                #wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
-                wp_id = search_target_index_v2(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6, c_distance, distance_traveled)
+                wp_id = search_target_index(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6)
+                # wp_id = search_target_index_v2(cx, cy, world.player.get_transform(), RefSpd*1.6/3.6, c_distance, distance_traveled)
                 #wp_id = search_target_index_lookBack(cx, cy, actor.get_transform(), speed_ego)
             
             #print('########### wp id: ' + str(wp_id))
@@ -1465,7 +1467,7 @@ def game_loop(args):
             ## Compute the desired reference speed in km per hr
             speed2go = RefSpd*1.6
             ## collision consideration
-            if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 1.5 or wp_id >= len(cx)-1:
+            if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 2 or wp_id >= len(cx)-1:
                 #controller._control.brake = 0.99
                 speed2go = 0
 

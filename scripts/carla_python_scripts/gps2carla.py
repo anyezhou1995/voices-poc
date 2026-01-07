@@ -226,3 +226,16 @@ def distance_real_latlon(latlongBSM, latlongMAP):
     #                                            lat2, lon2)
     lat_real1, lon_real1 = lat1, lon1
     return haversine(lat_real1, lon_real1, lat2, lon2), (lat_real1, lon_real1)
+
+def distances_to_heading(x_e, y_e, psi, x_t, y_t):
+    dx = x_t - x_e
+    dy = y_t - y_e
+    psi = math.radians(psi)
+
+    # along-track (forward) distance
+    d_parallel =  dx * math.cos(psi) + dy * math.sin(psi)
+
+    # cross-track (perpendicular) signed distance (left positive)
+    d_perp = -dx * math.sin(psi) + dy * math.cos(psi)
+
+    return d_parallel, d_perp, abs(d_perp)
