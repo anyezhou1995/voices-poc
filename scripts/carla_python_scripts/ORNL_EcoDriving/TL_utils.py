@@ -104,12 +104,10 @@ def getGreenWindow(j2735_tena, reference_timestamp, signal_group=2, greenDuratio
     """
     :param j2735_tena: SPaT data hex string
     :return: dict
-        'status':
-        't1s':
-        't1e':
-        't2s':
-        't2e':
-        'r1s':
+        'status': current signal status: green, red, yellow, str
+        # t1s, t1e: the start and end time of the closest green, float
+        # t2s, t2e: the start and end time of the second green, float
+        # r1s:      the start time of first red, float
     """
     decoded_msg = spat_data_process(j2735_tena)
     spatPhaseArray = [""] * 31
