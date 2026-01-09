@@ -159,6 +159,8 @@ def draw_waypoint_info(debug, w, lt=drawing_lifetime, x_offset=0,draw_data=False
         debug.draw_string(w_loc + carla.Location(x=x_offset,z=1.0),  f"road: {w.road_id}", False, cyan,   lt)
         debug.draw_string(w_loc + carla.Location(x=x_offset,z=1.5), f"lc: {w.lane_change}",    False, red,    lt)
         debug.draw_string(w_loc + carla.Location(x=x_offset,z=2), f"lt: {w.lane_type}",    False, red,    lt)
+        debug.draw_string(w_loc + carla.Location(x=x_offset,y=0.5,z=2), f"x: {w.transform.location.x}",    False, orange,    lt)
+        debug.draw_string(w_loc + carla.Location(x=x_offset,y=1,z=2), f"y: {w.transform.location.y}",    False, orange,    lt)
 
 def draw_waypoint_union(debug, w0, w1, color=green, lt=drawing_lifetime):
     # debug.draw_line(
@@ -274,8 +276,8 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
             continue
         
         draw_waypoint_union(debug,segment["starting_waypoint"],segment["ending_waypoint"],green)
-        draw_waypoint_info(debug,segment["starting_waypoint"])
-        draw_waypoint_info(debug,segment["ending_waypoint"],x_offset=1)
+        draw_waypoint_info(debug,segment["starting_waypoint"],draw_data=True)
+        draw_waypoint_info(debug,segment["ending_waypoint"],x_offset=1,draw_data=True)
         final_segment_list.append(segment)
 
 
@@ -660,9 +662,10 @@ try:
             if args.export:
                 df = pd.DataFrame(waypoint_data)
                 df = add_linear_distance(df)
-                df = df.rename(columns={"y": "y_tmp"})
-                df = df.rename(columns={"x": "y"})
-                df = df.rename(columns={"y_tmp": "x"})
+                # do not flip x and y as we want ENU
+                # df = df.rename(columns={"y": "y_tmp"})
+                # df = df.rename(columns={"x": "y"})
+                # df = df.rename(columns={"y_tmp": "x"})
 
                 df["ltpENU_yaw"] = (90.0 - df["carla_yaw"]) % 360.0
                 df["ltpENU_bearing_yaw"] = (90.0 - df["carla_bearing_yaw"]) % 360.0
