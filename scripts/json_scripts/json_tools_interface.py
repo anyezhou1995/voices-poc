@@ -63,17 +63,20 @@ import json_templates
 # Global Configurations
 # =================================
 LOCAL_ADDRESS = os.environ['VUG_LOCAL_ADDRESS']
-STREAMER_BIND_IP = os.getenv("VUG_STREAMER_BIND_IP", "0.0.0.0")  # IP to bind the UDP listener to; defaults to all interfaces
-SELECTED_WAYPOINT_CSV = "/home/dt_user/distributed-testing/scripts/json_scripts/delave_waypoints_v3.csv" # CSV file containing waypoint data
+VUG_STREAMER_BIND_IP = os.getenv("VUG_STREAMER_BIND_IP", "0.0.0.0")  # IP to bind the TCP listener to; defaults to all interfaces
+VUG_STREAMER_BIND_PORT = int(os.getenv("VUG_STREAMER_BIND_PORT","8005")) # Port to bind the TCP listener to; defaults to 8005
+VUG_PUBLISHER_REST_IP = os.getenv("VUG_PUBLISHER_REST_IP", "0.0.0.0") # IP of the JSON Publisher's REST API; defaults to 0.0.0.0
+VUG_PUBLISHER_REST_PORT = int(os.getenv("VUG_PUBLISHER_REST_PORT", "8004")) # Port of the JSON Publisher's REST API; defaults to 8004
+SELECTED_WAYPOINT_CSV = "/home/dt_user/distributed-testing/scripts/json_scripts/delave_waypoints_v4.csv" # CSV file containing waypoint data
+
 GET_OBJECT_TYPE = "waypoints" # options are "waypoints" or "api"
 COORDINATE_FORMAT = "ltpENU" # options are "geocentric" or "ltpENU"
-PUBLISHER_IP = LOCAL_ADDRESS
-PUBLISHER_ENDPOINT = LOCAL_ADDRESS + ":8004" #IP for TENA Publisher connection
-STREAMER_IP = LOCAL_ADDRESS
-STREAMER_DATA_ENDPOINT = LOCAL_ADDRESS + ":8005"
+PUBLISHER_ENDPOINT = VUG_PUBLISHER_REST_IP + ":" + str(VUG_PUBLISHER_REST_PORT) #Endpoint for JSON Publisher REST API
+STREAMER_DATA_ENDPOINT = VUG_STREAMER_BIND_IP + ":" + str(VUG_STREAMER_BIND_PORT)
 DATA_UPDATE_PERIOD = 0.1 # Period for retrieval of data (in seconds)
 INDIVIDUAL_TRANSMIT_DELAY = 0.002 # Period between transmission of individual entities to the REST API
 LOGGING_LEVEL = logging.DEBUG # sets the minimum level to log [DEBUG, INFO, WARNING, ERROR, CRITICAL]
+LOG_PATH = os.getenv("VUG_LOCAL_DT_PATH") # Path to where logs should be stored
 
 ENTITY_ID = "03:05" # Unique identifier used to determine entityID of the object JSON
 VEHICLE_LIST = {    # List of vehicles you will be providing updates for
@@ -112,13 +115,13 @@ def setup_logging(level=logging.INFO):
             Minimum level of logging that will be captured in the log file. Default is INFO
     """
 
-    # Gets the path to save your logs to, creates it if it doesn't already exist. ".../distributed-testing/logs/json_script_logs/"
-    dt_path = os.getenv("VUG_LOCAL_DT_PATH")
+    # Gets the path to save your logs to, creates it if it doesn't already exist. "LOG_PATH/logs/json_script_logs/"
+    dt_path = LOG_PATH
     if not dt_path:
-        raise ValueError("Environment variable VUG_LOCAL_DT_PATH not set")
+        raise ValueError("LOG PATH not valid")
     log_folder = os.path.join(dt_path, "logs/json_script_logs/")
     os.makedirs(log_folder, exist_ok=True)
-    os.chmod(log_folder, 0o777) # Modifies permission on the ../distributed-testing/logs/json_script_logs folder to rwxrwxrwx
+    os.chmod(log_folder, 0o777) # Modifies permission on the LOG_PATH/logs/json_script_logs folder to rwxrwxrwx
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     logging.basicConfig(
@@ -513,7 +516,7 @@ def transmit_main(mapOrigin_queue, stdout_lock):
     print(f"Map Origin received from receive_thread: {mapOrigin}")
 
     # Connection check to ensure REST API is available
-    if not wait_for_port(PUBLISHER_IP, 8004):
+    if not wait_for_port(VUG_PUBLISHER_REST_IP, VUG_PUBLISHER_REST_PORT):
         logging.error("REST API is not available")
         return
     
@@ -585,10 +588,10 @@ def get_count_of_objects(type_counts, type_name, stdout_lock):
 
 def receive_main(mapOrigin_queue, stdout_lock):
     """
-        Start a UDP server to receive object SDOs in JSON format
+        Start a TCP server to receive object SDOs in JSON format
 
-        This function creates a UDP socket, binds it to a configurable host and port, and listens for incoming connections.
-        When a client connects, it receives up to 8192 bytes of data, decodes it as UTF-8, and prints it to the console.
+        This function creates a TCP socket, binds it to a configurable host and port, and listens for incoming connections.
+        When a client connects, it receives up to 16 KB bytes of data, decodes it as UTF-8, and prints it to the console.
 
         Parameters
         ----------
@@ -606,43 +609,66 @@ def receive_main(mapOrigin_queue, stdout_lock):
         - It is up to the user to implement further processing of the received SDOs
     """
 
-    # Define host and port
-    HOST = STREAMER_BIND_IP  # Bind to all interfaces by default so loopback/physical NIC traffic is received
-    PORT = 8005
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((VUG_STREAMER_BIND_IP, VUG_STREAMER_BIND_PORT))
+    sock.listen(1)
+    print(f"Server listening on {VUG_STREAMER_BIND_IP}:{VUG_STREAMER_BIND_PORT} for TCP data...")
 
-    sock.bind((HOST, PORT))
-    print(f"Server listening on {HOST}:{PORT} for UDP data...")
+    conn, addr = sock.accept()
+    buffer_str = ""
+    decoder = json.JSONDecoder()
 
     # Initialize counters - dictionary to track all types
     type_counts = {}
 
-    log_file = open("received_data.jsonl", "w")
+    #log_file = open("received_data.jsonl", "w")
 
-    while True:
-        data, addr = sock.recvfrom(65535)
-        try: 
-            json_data = json.loads(data.decode('utf-8'))
+    try:
+        while True:
+            # Read Network Data
+            data = conn.recv(65536)
+            if not data:
+                break
+            
+            # Add to string buffer
+            buffer_str += data.decode('utf-8')
 
-            log_file.write(json.dumps(json_data) + "\n")
-            log_file.flush()
+            # Process all data in buffer
+            while True:
+                try:
+                    # Clean whitespace to prevent decoding
+                    buffer_str = buffer_str.lstrip()
 
-            # Pulls the EntityType from the received json
-            type_name = json_data["metadata"]["type_name"]
+                    # If buffer is emtpy, go read more data
+                    if not buffer_str:
+                        break
 
-            # Gets the map origin from the scenario json and puts it in a queue for the send thread to use
-            if type_name == "DOT_OSTR::Configuration::Scenario":
-                map_origin = json_templates.get_map_origin_from_scenario(json_data)
-                logging.info(f"Map Origin received from Scenario: {map_origin}")
-                mapOrigin_queue.put(map_origin)
+                    # Decode one object from the front of the buffer
+                    json_data, index = decoder.raw_decode(buffer_str)
 
-            #----- Our Example Implementation -----
-            get_count_of_objects(type_counts, type_name, stdout_lock)                            
-                         
-        except json.JSONDecodeError as err:
-            logging.error(f"Received non-JSON data from {addr}: {err}")
-            print(f"Received bad JSON data from {addr}: {err}")
+                    # Process scenario message
+                    type_name = json_data["metadata"]["type_name"]
+                    if type_name == "DOT_OSTR::Configuration::Scenario":
+                        map_origin = json_templates.get_map_origin_from_scenario(json_data)
+                        logging.info(f"Map Origin received from Scenario: {map_origin}")
+                        mapOrigin_queue.put(map_origin)
+
+                    # Process incoming messages
+                    #----- Our Example Implementation -----
+                    get_count_of_objects(type_counts, type_name, stdout_lock)
+
+                    # Remove processed object from the buffer
+                    buffer_str = buffer_str[index:]
+
+                except json.JSONDecodeError:
+                    # We have data, but it's not a full JSON object yet. Break the inner loop and go back to recv() to get more
+                    logging.debug(f"Partial JSON data in buffer, returning to recv() for more")
+                    break
+
+    finally:
+        conn.close()
+        sock.close()
 
 def main():
     """
