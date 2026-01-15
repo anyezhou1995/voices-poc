@@ -30,7 +30,7 @@ class VehiclePIDController():
     """
 
 
-    def __init__(self, vehicle, args_lateral, args_longitudinal, max_throttle=0.7, max_brake=0.3, max_steering=0.7):
+    def __init__(self, vehicle, args_lateral, args_longitudinal, max_throttle=0.5, max_brake=0.9, max_steering=0.7):
         """
         Constructor method.
 
@@ -54,7 +54,8 @@ class VehiclePIDController():
         self._vehicle = vehicle
         self._world = self._vehicle.get_world()
         self.past_steering = self._vehicle.get_control().steer
-        self._lon_controller = PIDLongitudinalController(self._vehicle, **args_longitudinal)
+        # self._lon_controller = PIDLongitudinalController(self._vehicle, **args_longitudinal)
+        self._lon_controller = PIDLongitudinalController_coast(self._vehicle)
         self._lat_controller = PIDLateralController(self._vehicle, **args_lateral)
 
     def run_step(self, target_speed, transform):
@@ -69,7 +70,7 @@ class VehiclePIDController():
         """
 
         acceleration = self._lon_controller.run_step(target_speed)
-        current_steering = self._lat_controller.run_step(transform)
+        current_steering = self._lat_controller.run_step(transform) if get_speed(self._vehicle) > 0.1 else 0.0
         control = carla.VehicleControl()
         if acceleration >= 0.0:
             control.throttle = min(acceleration, self.max_throt)
@@ -102,7 +103,7 @@ class PIDLongitudinalController():
     PIDLongitudinalController implements longitudinal control using a PID.
     """
 
-    def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.03):
+    def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.05):
         """
         Constructor method.
 
@@ -233,7 +234,7 @@ class PIDLongitudinalController_coast():
                  K_P=1.0, K_D=0.0, K_I=0.0,
                  dt=0.03,
                  v_coast_band=0.5,      # [km/h] speed error band for coasting
-                 u_deadzone=0.05,       # [-] small cmd -> 0 (no actuation)
+                 u_deadzone=0.1,       # [-] small cmd -> 0 (no actuation)
                  u_switch_thresh=0.15   # [-] hysteresis threshold at sign changes
                  ):
         self._vehicle = vehicle

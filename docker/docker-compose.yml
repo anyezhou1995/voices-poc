@@ -22,7 +22,7 @@ services:
       - ${VUG_LOCAL_DT_PATH}:/home/carla/distributed-testing
       - /usr/share/vulkan:/usr/share/vulkan:ro
       - /usr/share/vulkan/icd.d:/usr/share/vulkan/icd.d:ro
-      - /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.82.09:/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.82.09:ro
+      - /usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.119.02:/usr/lib/x86_64-linux-gnu/libnvidia-gpucomp.so.580.119.02:ro
     devices:
       - /dev/nvidia0:/dev/nvidia0
       - /dev/nvidiactl:/dev/nvidiactl

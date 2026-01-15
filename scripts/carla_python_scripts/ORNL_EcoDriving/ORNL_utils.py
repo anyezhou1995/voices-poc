@@ -142,7 +142,7 @@ def lat_lon_alt_to_xyz(latitude, longitude, altitude):
 
     return { "x":x, "y": y, "z": z }
 
-def process_SPaT(hex_data):
+def process_SPaT(hex_data, greenDuration=24, redDuration=3):
     '''
     UDP_IP = "10.7.108.81"
     UDP_PORT = 5398
@@ -159,7 +159,7 @@ def process_SPaT(hex_data):
 
     if hex_data.startswith("0013"):
         # print("=============Received SPaT=================")
-        intersectionID, greenWin = getGreenWindow(hex_data, reference_timestamp, greenDuration=40, redDuration=30)
+        intersectionID, greenWin = getGreenWindow(hex_data, reference_timestamp, greenDuration=greenDuration, redDuration=redDuration)
         return True, greenWin, intersectionID
     else:
         return False, {}, None
@@ -183,8 +183,8 @@ def process_BSM(hex_data):
         decoded_msg.from_uper(ba.unhexlify(hex_data))
         # decoded_bsm = decoded_msg.to_json()
         decoded_bsm = decoded_msg()
-        #print("Decoded BSM: ")
-        #print(str(decoded_msg.to_json()) + "\n")
+        print("Decoded BSM: ")
+        print(str(decoded_msg.to_json()) + "\n")
 
         bsmId = decoded_bsm['value'][1]['coreData']['id']
         decoded_bsm['value'][1]['coreData']['id'] = str(bsmId.hex())
@@ -207,7 +207,7 @@ def process_BSM(hex_data):
         x, y, z = gps_to_carla(lat/10**7, longstr/10**7, elevation/10)
 
         #if decoded_bsm['value'][1]['coreData']['id'] == "f03ad620":
-        if decoded_bsm['value'][1]['coreData']['id'] == "f03ad628":
+        if decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
             #print('BSM position: ', lat, longstr, elevation)
             '''
             xyz1 = GeodeticToEcef(lat, longstr, elevation)
@@ -221,13 +221,15 @@ def process_BSM(hex_data):
             #print(xyz2['x'], xyz2['y'])
             print('MCity origin: ', mcity_origin['x'], mcity_origin['y'])
             '''
-            print('Lead BSM Coordinate: ', x, y, z)
             # return True, x, y, speed_converted
             # return True, lat/1e7, longstr/1e7, speed_converted
-        elif decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
-            #print('Ego BSM Coordinate: ', x-mcity_origin['x'], y-mcity_origin['y'], z)
+
             print('Ego BSM Coordinate no offset: ', x, y, z)
             return True, lat/1e7, longstr/1e7, speed_converted
+        # elif decoded_bsm['value'][1]['coreData']['id'] == "f03ad658":
+        else:
+            #print('Ego BSM Coordinate: ', x-mcity_origin['x'], y-mcity_origin['y'], z)
+            print('Lead BSM Coordinate: ', decoded_bsm['value'][1]['coreData']['id'], x, y, z)
 
     return False, 0, 0, 0
 
@@ -883,7 +885,7 @@ def determine_signal_phase_from_map(ego_location, ego_latlong, map_message=None,
 
     return None
 
-def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_heading=None, max_search_distance=100.0):
+def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_heading=None, max_search_distance=150.0):
     """Determine the MAP signal group using only lat/lon values (no CARLA XY conversion).
 
     Parameters
@@ -1060,7 +1062,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         return None
 
     intersections = map_body.get('intersections', [])
-    print('## [DEBUG]', ' Intersections found in MAP message: ', len(intersections))
+    # print('## [DEBUG]', ' Intersections found in MAP message: ', len(intersections))
     if intersections:
         for intersection in intersections:
             ref_lat, ref_lon, ref_elev = _extract_lat_lon(intersection.get('refPoint'))
@@ -1085,7 +1087,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         intersection = cached['intersection']
         ref_geo = cached['geo']
         dist_to_intersection, ego_latlon_real = distance_real_latlon((ego_lat, ego_lon), (ref_geo[0], ref_geo[1]))
-        print('## [DEBUG] Intersection loc info: ', ref_geo, dist_to_intersection, ego_latlon_real)
+        print(f'## [DEBUG] Intersection lat-lon: {ref_geo}, Dist to ego: {dist_to_intersection}, Ego lat-lon: {ego_latlon_real}')
         if dist_to_intersection < 1.0:
             continue
         if heading_vec is not None:
@@ -1157,7 +1159,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
 
 gpsPairs = []
 
-def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_info = None, max_search_distance=100.0):
+def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_info = None, max_search_distance=125.0):
     """Return the lead vehicle BSM that is closest to the ego vehicle position and travel direction.
 
     Parameters
@@ -1299,7 +1301,9 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         vec_to_vehicle = np.array(vehicle_xy) - ego_xy_vec
         dist_to_vehicle = np.linalg.norm(vec_to_vehicle)
         _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_heading, vehicle_xy[0], vehicle_xy[1])
-        if dist_to_vehicle < 1.0 or abs_d_perp >= 2.1:
+        vehicle_fwd_vec = _heading_vector(cached['position'], cached['heading'])
+        opposite = np.dot(vehicle_fwd_vec, heading_vec)
+        if dist_to_vehicle < 1.0 or abs_d_perp >= 2 or opposite < 0:
             continue
         if heading_vec is not None:
             #print("Heading Vec:", heading_vec, "heading angle: ", ego_heading)
@@ -1339,6 +1343,56 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         return stale
             
     return None
+
+def determine_leader_carla(ego_transform, nearby_vehicles, max_search_distance=100.0):
+    """Return the lead vehicle that is closest to the ego vehicle position and travel direction.
+
+    Parameters
+    ----------
+    ego_transform : carla.Transform
+        Current ego pose.
+    nearby_vehicles : list of carla.Vehicle
+        List of nearby vehicles to consider as potential leaders.
+    max_search_distance : float, optional
+        Maximum allowed distance (meters) between the ego position and the
+        lead vehicle before giving up; defaults to 100 meters.
+
+    Returns
+    -------
+    carla.Vehicle | None
+        When a candidate lead vehicle is found, the corresponding carla.Vehicle object is returned.
+        ``None`` is returned if no viable lead vehicle can be determined.
+    """
+    if not nearby_vehicles:
+        return None
+    
+    ego_xy = (ego_transform.location.x, ego_transform.location.y)
+    heading_vec = _heading_vector(ego_transform.location, ego_transform.rotation.yaw)
+    ego_fwd = ego_transform.get_forward_vector()
+
+    candidate_list = []
+    for vehicle in nearby_vehicles:
+        vehicle_transform = vehicle.get_transform()
+        vehicle_xy = (vehicle_transform.location.x, vehicle_transform.location.y)
+        vec_to_vehicle = np.array(vehicle_xy) - np.array(ego_xy)
+        dist_to_vehicle = np.linalg.norm(vec_to_vehicle)
+        _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_transform.rotation.yaw, vehicle_xy[0], vehicle_xy[1])
+        if dist_to_vehicle > max_search_distance or abs_d_perp >=2:
+            continue
+        if heading_vec is not None:
+            forward_component = np.dot(vec_to_vehicle, heading_vec)
+            oth_fwd = vehicle_transform.get_forward_vector()
+            opposite = (ego_fwd.x * oth_fwd.x + ego_fwd.y * oth_fwd.y)
+            if forward_component <= 0 or opposite < 0:
+                continue
+        candidate_list.append((vehicle, dist_to_vehicle))
+
+    if not candidate_list:
+        return None
+    
+    candidate_list.sort(key=lambda item: item[1])
+
+    return candidate_list[0]
 
 def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, reference_timestamp, SpatData):
     """
@@ -1552,8 +1606,8 @@ INTERSECTION_XY = {
     '5': (53.89, 713.76),
     '6': (231.28, 709.92),
     '7': (360.30, 720.24),
-    '8': (475.90, 802.15),
-    '9': (530.47, 843.83)
+    # '8': (475.90, 802.15),
+    '8': (530.47, 843.83)
 }
 
 def get_closest_intersection_carla(ego_location, ego_heading=None):

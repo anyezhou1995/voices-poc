@@ -1161,7 +1161,7 @@ import json, threading, time
 #import matplotlib.pyplot as plt
 
 # Speed planner and low-level throttle/brake steering controller
-from ORNL_utils import get_closest_intersection_carla, draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, decode_map, search_target_index, search_target_index_v2, determine_signal_phase_from_map_latlon, determine_leader, vehicle_logger
+from ORNL_utils import get_closest_intersection_carla, draw_box, configToDict, get_advisory_speed, getGreenWindow, lat_long_to_xyz_better, process_SPaT, process_BSM, decode_map, search_target_index, search_target_index_v2, determine_signal_phase_from_map_latlon, determine_leader, vehicle_logger, determine_leader_carla
 from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
@@ -1193,13 +1193,15 @@ logger = logging.getLogger(__name__)
 
 # logger.addHandler(ch)
 
+BSM_interval, SPaT_interval, MAP_interval = [], [], []
+last_time_BSM, last_time_SPaT, last_time_MAP = None, None, None
 
 #####################################
 # ----- receive_loop_thread ------- #
 #####################################
 
 def receive_loop():
-    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger, ego_lat, ego_long
+    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger, ego_lat, ego_long, last_time_SPaT, SPaT_interval, last_time_BSM, BSM_interval
     try:
         # Set the UDP specs
         UDP_IP = "10.7.153.56" ##"10.7.108.81"
@@ -1213,7 +1215,7 @@ def receive_loop():
         # Set a SPaT data to continue running the car
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
-        SPaT_Record = {str(i): spatCache for i in range(1, 10)}
+        SPaT_Record = {str(i): spatCache for i in range(1, 9)} # 8 intersections
 
         while True:
             if shutdown.is_set():
@@ -1231,6 +1233,11 @@ def receive_loop():
             if SPaT_flag:
                 logger.info(f'**************** SPaT data updated for {str(intersection_id)}: {spatCache}')
                 SPaT_Record[str(intersection_id)] = spatInfo
+                if last_time_SPaT:
+                    SPaT_interval.append(time.perf_counter() - last_time_SPaT)
+                last_time_SPaT = time.perf_counter()
+            else:
+                print('..............No new SPaT info extracted................')
 
             ## second receive to get BSM
             #data, addr = sock.recvfrom(4096)
@@ -1240,6 +1247,8 @@ def receive_loop():
             if BSM_flag:
                 ego_lat, ego_long = x1, y1
                 print('BSM return: ', BSM_flag, x1, y1, speed)
+                BSM_interval.append(time.perf_counter() - last_time_BSM) if last_time_BSM else None
+                last_time_BSM = time.perf_counter()
 
     except Exception as e:
         #print(f"[Receive] Exception: {e}")
@@ -1255,7 +1264,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
-    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd, ego_lat, ego_long
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd, ego_lat, ego_long, last_time_MAP, MAP_interval
     pygame.init()
     pygame.font.init()
     world = None
@@ -1283,7 +1292,9 @@ def game_loop(args):
     distance_traveled = np.hypot(spawn_pos.location.x - cx[0], spawn_pos.location.y - cy[0])
 
     best_phase = None
-    closest_intersection_id, best_SG_id = '9', '2'
+    closest_intersection_id, best_SG_id = '8', '2'
+
+    veh_coords= {}
 
     try:
         client = carla.Client(args.host, args.port)
@@ -1328,6 +1339,7 @@ def game_loop(args):
             for actor in actor_list:
                 #print(actor.id, actor.type_id)
                 #if actor.type_id == 'vehicle.toyota.prius':
+                # veh_coords[actor.attributes['role_name']] = (actor.get_transform().location.x, actor.get_transform().location.y, actor.get_transform().rotation.yaw)
                 if actor.attributes['role_name'] == 'FHWA-M-3':
                     # Use actual name
                     ref_trans1 = actor.get_transform()
@@ -1355,7 +1367,7 @@ def game_loop(args):
             distance_traveled += speed_ego * (this_loop_time - last_loop_time)
             last_loop_time = this_loop_time
 
-            closest_intersection_id_carla, closest_intersection_dist = get_closest_intersection_carla(world.player.get_transform())
+            closest_intersection_id_carla, closest_intersection_dist_carla = get_closest_intersection_carla(world.player.get_transform())
 
             vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6])
 
@@ -1369,12 +1381,26 @@ def game_loop(args):
                     print('Best leader from BSM: ', best_leader['bsm_id'], best_leader['distance'], best_leader['lead_speed'])
                     # print("Update leader info from BSM!")
                 else:
-                    logger.warning('No leader found from BSM, using cached values')
-                    best_leader = {'distance': 60, 'lead_speed': 30}
+                    logger.warning('...............No leader found from BSM, using cached values..................')
+                    best_leader = {'distance': 250, 'lead_speed': 20}
             except Exception as e:
                 logger.error(f"[Carla] Finding leader exception: {e}")
                 #best_leader = None
-                best_leader = {'distance': 60, 'lead_speed': 30}
+                best_leader = {'distance': 250, 'lead_speed': 20}
+
+            try:
+                best_leader_carla = determine_leader_carla(world.player.get_transform(), actor_list)
+                if best_leader_carla:
+                    temp_dist = best_leader_carla[1]
+                    temp_speed = np.hypot(best_leader_carla[0].get_velocity().x, best_leader_carla[0].get_velocity().y)
+                    best_leader = {'distance': temp_dist, 'lead_speed': temp_speed}
+                    logger.info('Best leader from Carla: ', best_leader_carla[0].attributes['role_name'], best_leader['distance'], best_leader['lead_speed'])
+                else:
+                    logger.warning('....................No leader found from Carla........................')
+                    best_leader = {'distance': 250, 'lead_speed': 20}
+            except Exception as e:
+                logger.error(f"[Carla] Finding leader from Carla exception: {e}")
+                best_leader = {'distance': 250, 'lead_speed': 20}
 
             try:
                 #best_phase = determine_signal_phase_from_map(world.player.get_transform().location, ego_latlong=(x1, y1), map_message=hex_data, ego_heading=world.player.get_transform().rotation.yaw)
@@ -1382,13 +1408,16 @@ def game_loop(args):
                 if best_phase:
                     #logger.info(f'################Best signal phase from MAP: {best_phase}')
                     # print("################# Update phase group info from MAP! ", best_phase)
-                    closest_intersection_id, best_SG_id = best_phase['intersection_id'], best_phase['signal_group']
+                    closest_intersection_id, best_SG_id, closest_intersection_dist = best_phase['intersection_id'], best_phase['signal_group'], best_phase['distance']
+                    logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla},  Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}')
+                    MAP_interval.append(time.perf_counter() - last_time_MAP) if last_time_MAP else None
+                    last_time_MAP = time.perf_counter()
                 else:
                     logger.warning('No updated signal phase group from MAP.')
             except Exception as e:
                 logger.error(f"[Carla] Finding signal phase exception: {e}")
                 best_phase = None
-            #logger.info('Best phase: ', best_phase)
+            # logger.info('Best phase: ', best_phase)
 
             # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
             # print('Leader Carla Coordinate: ', x, y)
@@ -1399,12 +1428,12 @@ def game_loop(args):
             #     spacing = np.nan
 
             ## Pass intersection stop bar or not    
-            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id is '9':
+            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id_carla is '8':
                 pass_or_not = 1
 
-            logger.info(f'Closest ID Carla: {closest_intersection_id_carla}, {type(closest_intersection_id_carla)},  Closest ID: {closest_intersection_id}, {type(closest_intersection_id)}')
+            # logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla},  Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}')
             
-            int_intersect_id = max(int(closest_intersection_id_carla), int(closest_intersection_id))
+            int_intersect_id = min(int(closest_intersection_id_carla), int(closest_intersection_id))
             spatCache = SPaT_Record.get(str(int_intersect_id), spatCache)
             ## Record latest spat just in case
             # if str(intersection_id) == closest_intersection_id:
@@ -1427,8 +1456,8 @@ def game_loop(args):
                     ##if approaching intersection, use eco-approaching algorithm
                     if not pass_or_not:
                         # RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (closest_intersection_dist-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
-                        # logger.info('Use the latest SPaT to update eco-driving speed!')
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (closest_intersection_dist_carla-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
+                        logger.info('....................Use the latest SPaT to update eco-driving speed!.........................')
                     ##if passed intersection, use CF model
                     else:
                         logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
@@ -1474,7 +1503,7 @@ def game_loop(args):
             ## Controller execution
             if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
                 return
-
+            logger.info(f'Speed2Go: {speed2go:.2f}, Control command: Throttle {controller._control.throttle:.2f}, Brake {controller._control.brake:.2f}, Steer {controller._control.steer:.2f}')
             #print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
             #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
             #print('Ref pos: ' + str(ref_trans.location.x) + ', ' + str(ref_trans.location.y))
@@ -1593,7 +1622,7 @@ def main():
 
     try:
         while thread_recv.is_alive() and thread_carla.is_alive():
-            sleep(0.05)
+            sleep(0.01)
     except KeyboardInterrupt:
         logger.error('\n [Main] Ctrl+C Cancelled by user. Bye!')
         #print('\n [Main] Ctril+C Cancelled by user. Bye!')
@@ -1602,6 +1631,9 @@ def main():
         thread_recv.join(timeout=1.0)
         thread_carla.join(timeout=1.0)
         logger.info('[Main] Exit!')
+        logger.info(f'Stats of SPaT interval: mean {np.mean(SPaT_interval) if SPaT_interval else None}s, std{np.std(SPaT_interval) if SPaT_interval else None}s')
+        logger.info(f'Stats of BSM interval: mean {np.mean(BSM_interval) if BSM_interval else None}s, std {np.std(BSM_interval) if BSM_interval else None}s')
+        logger.info(f'Stats of MAP interval: mean {np.mean(MAP_interval) if MAP_interval else None}s, std {np.std(MAP_interval) if MAP_interval else None}s')
         #print('[Main] Exit!')
 
 
