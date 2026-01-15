@@ -337,6 +337,8 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
         
         f_c.close()
 
+        os.chmod(f'waypoint_files/{veh_name}_carma_route', 0o666)
+
         f_g = open(f'waypoint_files/{veh_name}_waypoints.csv', "w")
     
         print("\nGENERAL ROUTE:")
@@ -345,6 +347,7 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
             f_g.write(f'{route_line}\n')
         
         f_g.close()
+        os.chmod(f'waypoint_files/{veh_name}_waypoints.csv', 0o666)
 
 
     waypoint_data = {
@@ -573,7 +576,14 @@ try:
         current_directory = os.getcwd()
         folder_path = os.path.join(current_directory, "waypoint_files")
         if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+            try: 
+                os.makedirs(folder_path)
+                os.chmod(folder_path,0o777)
+            except Exception as errMsg:
+                print(f"ERROR: Unable to make directory waypoint files: {errMsg}")
+                print("\tCreate directory waypoint_files within carla_python_scripts with read and write permissions for all users:")
+                print("\t\t'mkdir waypoint_files' -> 'chmod 777 waypoint_files'")
+                sys.exit(1)
 
     if args.follow_vehicle:
         listener = keyboard.Listener(on_press=on_press)
@@ -653,27 +663,30 @@ try:
             new_spawns.append(this_spawn)
 
 
-        for test_spawn in new_spawns:
-            # world.debug.draw_string(test_spawn["spawn_point"], "o", draw_shadow=False,color = carla.Color(r=255, g=255, b=0), life_time=drawing_lifetime,persistent_lines=True)
-            print("\nDrawing: " + test_spawn["name"])
-            # world.debug.draw_string(test_spawn["spawn_point"], "     " + test_spawn["name"], draw_shadow=False,color = carla.Color(r=255, g=255, b=0), life_time=drawing_lifetime,persistent_lines=True)
-            waypoint_data = draw_waypoints(world,map,test_spawn["waypoints"],True,test_spawn["name"])
+        for spawn in new_spawns:
+            # world.debug.draw_string(spawn["spawn_point"], "o", draw_shadow=False,color = carla.Color(r=255, g=255, b=0), life_time=drawing_lifetime,persistent_lines=True)
+            print("\nDrawing: " + spawn["name"])
+            # world.debug.draw_string(spawn["spawn_point"], "     " + spawn["name"], draw_shadow=False,color = carla.Color(r=255, g=255, b=0), life_time=drawing_lifetime,persistent_lines=True)
+            waypoint_data = draw_waypoints(world,map,spawn["waypoints"],True,spawn["name"])
 
             if args.export:
                 df = pd.DataFrame(waypoint_data)
                 df = add_linear_distance(df)
-                # do not flip x and y as we want ENU
-                # df = df.rename(columns={"y": "y_tmp"})
-                # df = df.rename(columns={"x": "y"})
-                # df = df.rename(columns={"y_tmp": "x"})
 
-                df["ltpENU_yaw"] = (90.0 - df["carla_yaw"]) % 360.0
-                df["ltpENU_bearing_yaw"] = (90.0 - df["carla_bearing_yaw"]) % 360.0
+                df["y"] = -1 * df["y"]
 
-                # df["y"] = -df["y_carla"]
-                df.to_csv("waypoint_files/" + test_spawn["name"] + '_breadcrumbs.csv', index=False)
+                df["roll"] = (180 + df["roll"]) % 360.0
+                df["road_grade"] = (-1 * df["road_grade"]) % 360.0
+                df["ltpENU_yaw"] = (-1 * df["carla_yaw"]) % 360.0
+                df["ltpENU_bearing_yaw"] = (-1 * df["carla_bearing_yaw"]) % 360.0
+
+                df.to_csv("waypoint_files/" + spawn["name"] + '_breadcrumbs.csv', index=False)
+                os.chmod("waypoint_files/" + spawn["name"] + '_breadcrumbs.csv', 0o666)
 
             time.sleep(draw_loop_sleep)
+
+except Exception as errMsg:
+    print(f"ERROR: Failed to draw waypoints: {errMsg}")
 
 finally:
     print('\nDone!')

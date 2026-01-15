@@ -128,7 +128,10 @@ def main():
             print(vehicle)
             print("attributes: " + str(vehicle.attributes))
             print("vehicle transform: " + str(vehicle.get_transform()))
-            print("Lat/Long: " + str(world_map.transform_to_geolocation(vehicle.get_transform().location)))
+            veh_lat_long = world_map.transform_to_geolocation(vehicle.get_transform().location)
+            print("Lat/Long: " + str(veh_lat_long))
+            print("Lat: " + str(veh_lat_long.latitude))
+            print("Long: " + str(veh_lat_long.longitude))
             print("")
 
 

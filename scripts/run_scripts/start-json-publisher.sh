@@ -86,4 +86,4 @@ BASH_XTRACEFD=4
 
 set -x
 
-$VUG_JSON_PUBLISHER_PATH/start.sh $useBestEffort -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -serverEndpoint $VUG_LOCAL_ADDRESS:8004 -verbosity $adapterVerbosity | awk -v adapter="[$VUG_JSON_PUBLISHER_VERSION]" '{print adapter, $0, fflush(); }' | tee -a $adapterLogFile
+$VUG_JSON_PUBLISHER_PATH/start.sh $useBestEffort -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -serverEndpoint $VUG_PUBLISHER_REST_IP:$VUG_PUBLISHER_REST_PORT -verbosity $adapterVerbosity | awk -v adapter="[$VUG_JSON_PUBLISHER_VERSION]" '{print adapter, $0, fflush(); }' | tee -a $adapterLogFile

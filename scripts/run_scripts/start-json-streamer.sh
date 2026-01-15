@@ -86,4 +86,4 @@ BASH_XTRACEFD=4
 
 set -x
 
-$VUG_JSON_STREAMER_PATH/start.sh $useBestEffort -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -dataEndpoint $VUG_LOCAL_ADDRESS:8005 -schemaEndpoint $VUG_LOCAL_ADDRESS:8006 -verbosity $adapterVerbosity | awk -v adapter="[$VUG_JSON_STREAMER_VERSION]" '{print adapter, $0, fflush(); }' | tee -a $adapterLogFile
+$VUG_JSON_STREAMER_PATH/start.sh $useBestEffort -useTCPforData -emEndpoints $VUG_EM_ADDRESS:$VUG_EM_PORT -listenEndpoints $VUG_LOCAL_ADDRESS -dataEndpoint $VUG_STREAMER_BIND_IP:$VUG_STREAMER_BIND_PORT -schemaEndpoint $VUG_STREAMER_BIND_IP:8006 -verbosity $adapterVerbosity | awk -v adapter="[$VUG_JSON_STREAMER_VERSION]" '{print adapter, $0, fflush(); }' | tee -a $adapterLogFile
