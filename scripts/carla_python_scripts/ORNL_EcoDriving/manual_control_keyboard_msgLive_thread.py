@@ -1228,7 +1228,7 @@ def receive_loop():
             hex_data = data.hex()
 
             ## first receive to get SPaT
-            #map_info = decode_map(hex_data)
+            # map_info = decode_map(hex_data)
             SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data)
             if SPaT_flag:
                 logger.info(f'**************** SPaT data updated for {str(intersection_id)}: {spatCache}')
@@ -1394,7 +1394,7 @@ def game_loop(args):
                     temp_dist = best_leader_carla[1]
                     temp_speed = np.hypot(best_leader_carla[0].get_velocity().x, best_leader_carla[0].get_velocity().y)
                     best_leader = {'distance': temp_dist, 'lead_speed': temp_speed}
-                    logger.info('Best leader from Carla: ', best_leader_carla[0].attributes['role_name'], best_leader['distance'], best_leader['lead_speed'])
+                    logger.info(f'Best leader from Carla: {best_leader_carla[0].attributes["role_name"]}, {best_leader["distance"]}, {best_leader["lead_speed"]}')
                 else:
                     logger.warning('....................No leader found from Carla........................')
                     best_leader = {'distance': 250, 'lead_speed': 20}
@@ -1408,8 +1408,8 @@ def game_loop(args):
                 if best_phase:
                     #logger.info(f'################Best signal phase from MAP: {best_phase}')
                     # print("################# Update phase group info from MAP! ", best_phase)
-                    closest_intersection_id, best_SG_id, closest_intersection_dist = best_phase['intersection_id'], best_phase['signal_group'], best_phase['distance']
-                    logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla},  Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}')
+                    closest_intersection_id, best_SG_id, closest_intersection_dist = best_phase['intersection_id'], best_phase['signal_group'], best_phase['intersection_distance']
+                    logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla}, Best Phase Group: {best_SG_id}, Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}')
                     MAP_interval.append(time.perf_counter() - last_time_MAP) if last_time_MAP else None
                     last_time_MAP = time.perf_counter()
                 else:
@@ -1428,7 +1428,7 @@ def game_loop(args):
             #     spacing = np.nan
 
             ## Pass intersection stop bar or not    
-            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id_carla is '8':
+            if controller.eco_drive and pass_or_not == 0 and closest_intersection_id_carla is '9':
                 pass_or_not = 1
 
             # logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla},  Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}')
@@ -1460,7 +1460,7 @@ def game_loop(args):
                         logger.info('....................Use the latest SPaT to update eco-driving speed!.........................')
                     ##if passed intersection, use CF model
                     else:
-                        logger.info(f'Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}')
+                        logger.info(f'****************Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}********************************')
                         # _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
                         _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
                     RefSpd = min(30, RefSpd)
@@ -1496,7 +1496,8 @@ def game_loop(args):
             ## Compute the desired reference speed in km per hr
             speed2go = RefSpd*1.6
             ## collision consideration
-            if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 2 or wp_id >= len(cx)-1:
+            # if speed2go/3.6<0.1 or (spacing <= 1 and speed_diff <= 0) or spacing <= 2 or wp_id >= len(cx)-1:
+            if speed2go/3.6<0.1 or (best_leader['distance']-4 <= 1 and best_leader['lead_speed']-speed_ego <= 0) or best_leader['distance']-4 <= 2 or wp_id >= len(cx)-1:
                 #controller._control.brake = 0.99
                 speed2go = 0
 

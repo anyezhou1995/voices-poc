@@ -183,8 +183,8 @@ def process_BSM(hex_data):
         decoded_msg.from_uper(ba.unhexlify(hex_data))
         # decoded_bsm = decoded_msg.to_json()
         decoded_bsm = decoded_msg()
-        print("Decoded BSM: ")
-        print(str(decoded_msg.to_json()) + "\n")
+        # print("Decoded BSM: ")
+        # print(str(decoded_msg.to_json()) + "\n")
 
         bsmId = decoded_bsm['value'][1]['coreData']['id']
         decoded_bsm['value'][1]['coreData']['id'] = str(bsmId.hex())
@@ -1087,7 +1087,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         intersection = cached['intersection']
         ref_geo = cached['geo']
         dist_to_intersection, ego_latlon_real = distance_real_latlon((ego_lat, ego_lon), (ref_geo[0], ref_geo[1]))
-        print(f'## [DEBUG] Intersection lat-lon: {ref_geo}, Dist to ego: {dist_to_intersection}, Ego lat-lon: {ego_latlon_real}')
+        # print(f'## [DEBUG] Intersection lat-lon: {ref_geo}, Dist to ego: {dist_to_intersection}, Ego lat-lon: {ego_latlon_real}')
         if dist_to_intersection < 1.0:
             continue
         if heading_vec is not None:
@@ -1110,7 +1110,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
     target_distance, target_intersection, target_geo, target_ego_latlon_real = candidate_list[0]
 
     #print('## [DEBUG] Ego original lat lon: ', ego_lat, ego_lon, target_geo)
-    print('## [DEBUG] Candidate metrics: ', target_distance, target_ego_latlon_real)
+    # print('## [DEBUG] Candidate metrics: ', target_distance, target_ego_latlon_real)
 
     best_match = None
     lane_set = target_intersection.get('laneSet', [])
@@ -1282,8 +1282,8 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         #         print(f"  offset_y       = {tf.offset_y:.6f} m")
         #         print(f"  offset_z       = {tf.offset_z:.6f} m")
 
-    print('[DEBUG] BSM_INFO: ', _cached_vehicles)
-    print('[DEBUG] CARLA INFO: ', carla_info)
+    # print('[DEBUG] BSM_INFO: ', _cached_vehicles)
+    # print('[DEBUG] CARLA INFO: ', carla_info)
     
     if not _cached_vehicles:
         if _cached_bsm_state['last_leader'] is not None:
@@ -1303,7 +1303,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_heading, vehicle_xy[0], vehicle_xy[1])
         vehicle_fwd_vec = _heading_vector(cached['position'], cached['heading'])
         opposite = np.dot(vehicle_fwd_vec, heading_vec)
-        if dist_to_vehicle < 1.0 or abs_d_perp >= 2 or opposite < 0:
+        if dist_to_vehicle < 0.5 or abs_d_perp >= 1.5 or opposite < 0:
             continue
         if heading_vec is not None:
             #print("Heading Vec:", heading_vec, "heading angle: ", ego_heading)
@@ -1377,7 +1377,7 @@ def determine_leader_carla(ego_transform, nearby_vehicles, max_search_distance=1
         vec_to_vehicle = np.array(vehicle_xy) - np.array(ego_xy)
         dist_to_vehicle = np.linalg.norm(vec_to_vehicle)
         _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_transform.rotation.yaw, vehicle_xy[0], vehicle_xy[1])
-        if dist_to_vehicle > max_search_distance or abs_d_perp >=2:
+        if dist_to_vehicle > max_search_distance or abs_d_perp >=1.5:
             continue
         if heading_vec is not None:
             forward_component = np.dot(vec_to_vehicle, heading_vec)
