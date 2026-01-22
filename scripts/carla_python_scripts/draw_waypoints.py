@@ -75,6 +75,7 @@ draw_arrow_thickness = 0.2
 draw_arrow_z_offset = carla.Location(0,0,0)
 
 def on_press(key):
+    global recording
 
     world = client.get_world()
         
@@ -90,9 +91,9 @@ def on_press(key):
         key_char = None
 
     if key == Key.space:
-        print("Adding waypoint")
         follow_vehicle = get_veh_with_name(args.follow_vehicle)
-
+        
+        print(f"Adding waypoint: {follow_vehicle.get_location()}")
         spawn_data["waypoints"].append(follow_vehicle.get_location())
     elif key == Key.delete:
         print("Removing waypoint")
@@ -102,6 +103,13 @@ def on_press(key):
             spawn_data["waypoints"].pop()
         else:
             print("No waypoints to remove")
+    elif key == Key.enter:
+        recording = False
+        print("Done adding waypoints")
+        print(f"Waypoints:")
+        for waypoint in spawn_data["waypoints"]:
+            print(f"\tx: {waypoint.x} y: {waypoint.y} z: {waypoint.z}")
+
 
 def get_veh_with_name(veh_rolename):
     player = None
@@ -268,7 +276,8 @@ def draw_waypoints(world,map,waypoints,draw_arrows,veh_name):
 
     final_segment_list = []
     # roads_to_exclude = [131,281,382,328]
-    roads_to_exclude = [438,318,368,143]
+    # roads_to_exclude_delave_right = [438,318,368,143]
+    roads_to_exclude = [440,319,364,150]
     for segment in segment_list:
         
         if segment["ending_waypoint"].road_id in roads_to_exclude:
@@ -547,20 +556,34 @@ try:
     #             carla.Location(104.506683, y=-130.960526, z=241.668213),    # end
     #         ],
     # }
-    energy_campaign = {
-            "veh_in_order" : ["UCLA"],
-            "wp_btwn_veh" : 5,
-            "waypoints" : [
-                carla.Location(x=-754.107971, y=730.503052, z=1.324147), 
-                carla.Location(x=-421.867340, y=764.293213, z=0.899224), 
-                carla.Location(x=1.540522, y=720.684692, z=1.235085), 
-                carla.Location(x=313.938751, y=726.293762, z=0.711762), 
-                carla.Location(x=521.184143, y=845.688660, z=1.005151), 
-                carla.Location(x=621.049255, y=832.310791, z=1.037112), 
-            ],
+    # energy_campaign = {
+    #         "veh_in_order" : ["UCLA"],
+    #         "wp_btwn_veh" : 5,
+    #         "waypoints" : [
+    #             carla.Location(x=-754.107971, y=730.503052, z=1.324147), 
+    #             carla.Location(x=-421.867340, y=764.293213, z=0.899224), 
+    #             carla.Location(x=1.540522, y=720.684692, z=1.235085), 
+    #             carla.Location(x=313.938751, y=726.293762, z=0.711762), 
+    #             carla.Location(x=521.184143, y=845.688660, z=1.005151), 
+    #             carla.Location(x=621.049255, y=832.310791, z=1.037112), 
+    #         ],
+    # }
+    energy_campaign_left = {
+        "veh_in_order" : ["UCLA"],
+        "wp_btwn_veh" : 5,
+        "waypoints" : [
+            carla.Location(x=-745.4163818, y=728.8236694, z=0.03611618),
+            carla.Location(x=-607.802185, y=769.692688, z=-0.005152),
+            carla.Location(x=-311.8514709472656, y=748.8836059570312, z=0.036188773810863495),
+            carla.Location(x=-88.226082, y=726.184509, z=-0.029539),
+            carla.Location(x=305.2701110839844, y=722.4840698242188, z=0.036436766386032104),
+            carla.Location(x=603.3434448242188, y=830.186767578125, z=0.036185529083013535),
+        ],
     }
 
-    spawn_data = energy_campaign
+    recording = False
+
+    spawn_data = energy_campaign_left
 
     draw_loop_sleep = args.lifetime
 
@@ -594,7 +617,9 @@ try:
         
         spawn_data["waypoints"] = []
 
-        while True:
+        recording = True
+
+        while recording:
             world = client.get_world()
             map = world.get_map() 
 

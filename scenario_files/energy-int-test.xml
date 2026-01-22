@@ -25,7 +25,7 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="SWRI-AUTO-1" bsmid="f03ad627" type="vehicle.toyota.prius" simulationIdentifier="JSON-SWRI-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="SWRI">
+    <vehicle name="SWRI-JSON-1" bsmid="f03ad627" type="vehicle.toyota.prius" simulationIdentifier="JSON-SWRI-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="SWRI">
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="0.001857" longitudeInDegrees="0.000962" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
             <Heading>21.85235</Heading>
@@ -60,21 +60,21 @@
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="PITT-BG-1" bsmid="f03ad610" type="vehicle.toyota.prius" simulationIdentifier="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="PITT">
+    <vehicle name="PITT-JSON-1" bsmid="f03ad610" type="vehicle.toyota.prius" simulationIdentifier="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="PITT">
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="0.001821" longitudeInDegrees="0.001168" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
             <Heading>21.85235</Heading>
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="PITT-BG-2" bsmid="f03ad612" type="vehicle.toyota.prius" simulationIdentifier="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="PITT">
+    <vehicle name="PITT-JSON-2" bsmid="f03ad612" type="vehicle.toyota.prius" simulationIdentifier="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="PITT">
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="0.001878" longitudeInDegrees="0.001013" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
             <Heading>21.85235</Heading>
         </initialTSPI>
     </vehicle>
 
-    <vehicle name="PITT-BG-3" bsmid="f03ad613" type="vehicle.toyota.prius" simulationIdentifier="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="PITT">
+    <vehicle name="PITT-JSON-3" bsmid="f03ad613" type="vehicle.toyota.prius" simulationIdentifier="JSON-PITT-1" material="Aluminum" lvcIndicator="Constructive" generate_bsms="true" organization="PITT">
         <initialTSPI>
             <GeodeticPosition latitudeInDegrees="0.001931" longitudeInDegrees="0.000911" heightAboveEllipsoidInMeters="1"> </GeodeticPosition>
             <Heading>21.85235</Heading>
