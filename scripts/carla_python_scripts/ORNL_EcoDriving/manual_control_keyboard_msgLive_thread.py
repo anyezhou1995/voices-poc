@@ -1158,6 +1158,7 @@ import readline
 import pandas as pd
 from configparser import ConfigParser
 import json, threading, time
+import pickle
 #import matplotlib.pyplot as plt
 
 # Speed planner and low-level throttle/brake steering controller
@@ -1166,6 +1167,21 @@ from controller_ts import VehiclePIDController
 from speed_control_implementation_ggg import IntelligentDriverModel
 
 update_gap = 1
+
+
+def _spat_log_path_for_now():
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H")
+    filename = f"spat_record_log_{timestamp}.pkl"
+    return os.path.join(SCRIPT_DIR, filename)
+
+
+def _append_spat_record_snapshot(spat_record, log_file):
+    snapshot = {
+        "timestamp": time.time(),
+        "record": spat_record,
+    }
+    pickle.dump(snapshot, log_file, protocol=pickle.HIGHEST_PROTOCOL)
+    log_file.flush()
 
 # Setup specs for eco-driving planner
 RefSpd, ref_cache = 0, 0
@@ -1200,8 +1216,9 @@ last_time_BSM, last_time_SPaT, last_time_MAP = None, None, None
 # ----- receive_loop_thread ------- #
 #####################################
 
-def receive_loop():
-    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger, ego_lat, ego_long, last_time_SPaT, SPaT_interval, last_time_BSM, BSM_interval
+def receive_loop(args):
+    global SPaT_flag, BSM_flag, speed, speed_cache, x1, y1, spatInfo, spatCache, SPaT_Record, hex_data, map_info, intersection_id, logger, ego_lat, ego_long, last_time_SPaT, SPaT_interval, last_time_BSM, BSM_interval, MAP_Record
+    spat_log_file = None
     try:
         # Set the UDP specs
         UDP_IP = "10.7.153.56" ##"10.7.108.81"
@@ -1216,6 +1233,15 @@ def receive_loop():
         #spatCache = {}
         spatCache = {'currentTime': 50924, 'status': 'green', 't1s': 50924, 't1e': 50939, 't2s': 50969, 't2e': 51009, 'r1s': 50939}
         SPaT_Record = {str(i): spatCache for i in range(1, 9)} # 8 intersections
+        MAP_Record = {str(i): 2 for i in range(1, 9)} # assume all intersections have 2 signal groups
+        
+        if args.outfile:
+            try:
+                spat_log_path = _spat_log_path_for_now()
+                spat_log_file = open(spat_log_path, "ab")
+                logger.info(f"[Receive] SPaT record logging to {spat_log_path}")
+            except Exception as e:
+                logger.error(f"[Receive] Failed to open SPaT record log file: {e}")
 
         while True:
             if shutdown.is_set():
@@ -1229,7 +1255,12 @@ def receive_loop():
 
             ## first receive to get SPaT
             # map_info = decode_map(hex_data)
-            SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data)
+            try:
+                SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data, MAP_Record=MAP_Record)
+            except Exception as e:
+                logger.error(f"Error processing SPaT data: {e}")
+                SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data, MAP_Record=None)
+            
             if SPaT_flag:
                 logger.info(f'**************** SPaT data updated for {str(intersection_id)}: {spatCache}')
                 SPaT_Record[str(intersection_id)] = spatInfo
@@ -1249,11 +1280,19 @@ def receive_loop():
                 print('BSM return: ', BSM_flag, x1, y1, speed)
                 BSM_interval.append(time.perf_counter() - last_time_BSM) if last_time_BSM else None
                 last_time_BSM = time.perf_counter()
+            if args.outfile and spat_log_file is not None:
+                try:
+                    _append_spat_record_snapshot(SPaT_Record, spat_log_file)
+                except Exception as e:
+                    logger.error(f"[Receive] Failed to write SPaT record snapshot: {e}")
+                    spat_log_file = None
 
     except Exception as e:
         #print(f"[Receive] Exception: {e}")
         logger.error(f"Exception in receive_loop: {e}")
     finally:
+        if args.outfile and spat_log_file is not None:
+            spat_log_file.close()
         sock.close()
         logger.info("[Receive] Socket closed in receive_loop.")
         #print("[Receive] Stopped")
@@ -1264,7 +1303,7 @@ def receive_loop():
 #####################################
 
 def game_loop(args):
-    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd, ego_lat, ego_long, last_time_MAP, MAP_interval
+    global speed, speed_cache, speed_lead, BSM_flag, SPaT_flag, x, y, x1, y1, spatInfo, spatCache, SPaT_Record, vehicle_logger, intersection_id, logger, RefSpd, ego_lat, ego_long, last_time_MAP, MAP_interval, MAP_Record
     pygame.init()
     pygame.font.init()
     world = None
@@ -1272,7 +1311,10 @@ def game_loop(args):
     ego_speed_buffer = []
     Data4JH = []
 
-    vehicle_logger = vehicle_logger(args.outfile)
+    if args.outfile:
+        timestamp_temp = datetime.datetime.now().strftime("%Y%m%d_%H")
+        outDataFile = f"vehRecord_{timestamp_temp}.csv"
+        vehicle_logger = vehicle_logger(outDataFile)
 
     pass_or_not = 0
     last_dist2bar = 1e6
@@ -1286,13 +1328,15 @@ def game_loop(args):
 
     df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
     cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
+    # df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints_leftlane_v1.csv') # Get record waypoints
+    # cx, cy, cz = df_waypoints['x'].to_numpy(), -df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
     c_pitch, c_yaw, c_roll = df_waypoints['pitch'].to_numpy(), df_waypoints['yaw'].to_numpy(), df_waypoints['roll'].to_numpy()
     c_distance = df_waypoints['distance_traveled_m'].to_numpy()
     spawn_pos = carla.Transform(carla.Location(x=-726.36, y=740.29, z=3.0), carla.Rotation(pitch=0.0, yaw=18, roll=0.0))
     distance_traveled = np.hypot(spawn_pos.location.x - cx[0], spawn_pos.location.y - cy[0])
 
     best_phase = None
-    closest_intersection_id, best_SG_id = '8', '2'
+    closest_intersection_id, best_SG_id = '8', 2
 
     veh_coords= {}
 
@@ -1369,7 +1413,7 @@ def game_loop(args):
 
             closest_intersection_id_carla, closest_intersection_dist_carla = get_closest_intersection_carla(world.player.get_transform())
 
-            vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6])
+            # vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6])
 
             #print('Carla speed: ', speed_lead, ' BSM speed: ', speed)
             #print('Carla spacing: ', spacing, ' BSM spacing: ', spacing_bsm)
@@ -1408,16 +1452,23 @@ def game_loop(args):
                 if best_phase:
                     #logger.info(f'################Best signal phase from MAP: {best_phase}')
                     # print("################# Update phase group info from MAP! ", best_phase)
-                    closest_intersection_id, best_SG_id, closest_intersection_dist = best_phase['intersection_id'], best_phase['signal_group'], best_phase['intersection_distance']
-                    logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla}, Best Phase Group: {best_SG_id}, Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}')
+                    closest_intersection_id, best_SG_id, closest_intersection_dist, dist2bar = best_phase['intersection_id'], best_phase['signal_group'], best_phase['intersection_distance'], best_phase['dist2StopLine']
+                    logger.info(f'Closest intersection Carla: {closest_intersection_id_carla}, {closest_intersection_dist_carla}, Best Phase Group: {best_SG_id}, Closest intersection MAP: {closest_intersection_id}, {closest_intersection_dist}, {dist2bar}')
                     MAP_interval.append(time.perf_counter() - last_time_MAP) if last_time_MAP else None
                     last_time_MAP = time.perf_counter()
+                    MAP_Record[str(closest_intersection_id)] = best_SG_id
                 else:
                     logger.warning('No updated signal phase group from MAP.')
             except Exception as e:
                 logger.error(f"[Carla] Finding signal phase exception: {e}")
                 best_phase = None
             # logger.info('Best phase: ', best_phase)
+
+            if args.outfile:
+                if best_leader:
+                    vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6, best_leader['lead_speed'], best_leader['distance'], closest_intersection_dist_carla])
+                else:
+                    vehicle_logger.record([x1, y1, world.player.get_transform().rotation.yaw, speed_ego, accel_ego, RefSpd*1.6/3.6, np.nan, np.nan, closest_intersection_dist_carla])
 
             # print('Ego Carla Coordinate: ', world.player.get_transform().location.x, world.player.get_transform().location.y, world.player.get_transform().location.z)
             # print('Leader Carla Coordinate: ', x, y)
@@ -1456,7 +1507,7 @@ def game_loop(args):
                     ##if approaching intersection, use eco-approaching algorithm
                     if not pass_or_not:
                         # RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (closest_intersection_dist_carla-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28, reference_timestamp, spatCache)
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (closest_intersection_dist_carla-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4.5)*3.28, reference_timestamp, spatCache)
                         logger.info('....................Use the latest SPaT to update eco-driving speed!.........................')
                     ##if passed intersection, use CF model
                     else:
@@ -1505,7 +1556,7 @@ def game_loop(args):
             if controller.parse_events(client, world, clock, speed2go, ref_trans, args):
                 return
             logger.info(f'Speed2Go: {speed2go:.2f}, Control command: Throttle {controller._control.throttle:.2f}, Brake {controller._control.brake:.2f}, Steer {controller._control.steer:.2f}')
-            #print('Ego pos: ' + str(world.player.get_transform().location.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
+            #print('Ego pos: ' + str(world.player.get_transform().energy-int-test-new-em.configlocation.x) + ', ' + str(world.player.get_transform().location.y) + ', ' + str(world.player.get_transform().location.z))
             #print('Ego ang: ' + str(world.player.get_transform().rotation.pitch) + ', ' + str(world.player.get_transform().rotation.yaw) + ', ' + str(world.player.get_transform().rotation.roll))
             #print('Ref pos: ' + str(ref_trans.location.x) + ', ' + str(ref_trans.location.y))
 
@@ -1591,8 +1642,8 @@ def main():
         help='Gamma correction of the camera (default: 2.2)')
     argparser.add_argument(
         '-o', '--outfile',
-        default = 'OutputData.csv',
-        help = 'Name the output csv file to store data'
+        action='store_true',
+        help = 'Check if we need to store data'
     )
     argparser.add_argument(
         '--x', type=float,
@@ -1614,7 +1665,7 @@ def main():
 
     print(__doc__)
 
-    thread_recv = threading.Thread(target=receive_loop, daemon=True)
+    thread_recv = threading.Thread(target=receive_loop, args=(args,) daemon=True)
     thread_carla = threading.Thread(target=game_loop, args=(args,), daemon=True)
 
     thread_recv.start()
@@ -1632,9 +1683,9 @@ def main():
         thread_recv.join(timeout=1.0)
         thread_carla.join(timeout=1.0)
         logger.info('[Main] Exit!')
-        logger.info(f'Stats of SPaT interval: mean {np.mean(SPaT_interval) if SPaT_interval else None}s, std{np.std(SPaT_interval) if SPaT_interval else None}s')
-        logger.info(f'Stats of BSM interval: mean {np.mean(BSM_interval) if BSM_interval else None}s, std {np.std(BSM_interval) if BSM_interval else None}s')
-        logger.info(f'Stats of MAP interval: mean {np.mean(MAP_interval) if MAP_interval else None}s, std {np.std(MAP_interval) if MAP_interval else None}s')
+        logger.info(f'Stats of SPaT interval: mean {np.mean(SPaT_interval) if SPaT_interval else None} s, std {np.std(SPaT_interval) if SPaT_interval else None} s')
+        logger.info(f'Stats of BSM interval: mean {np.mean(BSM_interval) if BSM_interval else None} s, std {np.std(BSM_interval) if BSM_interval else None} s')
+        logger.info(f'Stats of MAP interval: mean {np.mean(MAP_interval) if MAP_interval else None} s, std {np.std(MAP_interval) if MAP_interval else None} s')
         #print('[Main] Exit!')
 
 

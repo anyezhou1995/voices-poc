@@ -142,7 +142,7 @@ def lat_lon_alt_to_xyz(latitude, longitude, altitude):
 
     return { "x":x, "y": y, "z": z }
 
-def process_SPaT(hex_data, greenDuration=24, redDuration=3):
+def process_SPaT(hex_data, greenDuration=24, redDuration=17, MAP_Record=None):
     '''
     UDP_IP = "10.7.108.81"
     UDP_PORT = 5398
@@ -159,7 +159,7 @@ def process_SPaT(hex_data, greenDuration=24, redDuration=3):
 
     if hex_data.startswith("0013"):
         # print("=============Received SPaT=================")
-        intersectionID, greenWin = getGreenWindow(hex_data, reference_timestamp, greenDuration=greenDuration, redDuration=redDuration)
+        intersectionID, greenWin = getGreenWindow(hex_data, reference_timestamp, greenDuration=greenDuration, redDuration=redDuration, MAP_Record=MAP_Record)
         return True, greenWin, intersectionID
     else:
         return False, {}, None
@@ -371,7 +371,7 @@ def spat_data_process(j2735_tena):
     return decoded_msg
 
 
-def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
+def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration, MAP_Record=None):
     # covnert json msg into SPaT info
     """
     :param j2735_tena: SPaT data hex string
@@ -383,9 +383,30 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
         't2e':
         'r1s':
     """
+    cycleLength = 90
+    timingPlan = {
+        '1': {'green': 49, 'red': cycleLength - 49},
+        '2': {'green': 50, 'red': cycleLength - 50},
+        '3': {'green': 50, 'red': cycleLength - 50},
+        '4': {'green': 64, 'red': cycleLength - 64},
+        '5': {'green': 64, 'red': cycleLength - 64},
+        '6': {'green': 64, 'red': cycleLength - 64},
+        '7': {'green': 59, 'red': cycleLength - 59},
+        '8': {'green': 49, 'red': cycleLength - 49}
+    }
     decoded_msg = spat_data_process(j2735_tena)
     spatPhaseArray = [""] * 31
     intersectionID = decoded_msg()['value'][1]['intersections'][0]['id']['id']
+
+    if MAP_Record:
+        if str(intersectionID) in MAP_Record or intersectionID in MAP_Record:
+            signalGroup = int(MAP_Record[str(intersectionID)])
+            print("##############################Determined signal group from MAP_Record: ", signalGroup, ' ##############################')
+        else:
+            signalGroup = 2  # default to phase 2
+    else:
+        signalGroup = 2  # default to phase 2
+
     try:
         intersectionName = decoded_msg()['value'][1]['intersections'][0]['name']
     except:
@@ -423,7 +444,8 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
         #print(phase, spatPhaseArray)
 
     #assume we are approaching phase 2, otherwise, it need to be determined based on MAP data.
-    phase2State = spatPhaseArray[2]
+    # phase2State = spatPhaseArray[2]
+    phase2State = spatPhaseArray[signalGroup]
     phase2Status = phase2State['state']
     phaseStatusDict = {'protected-Movement-Allowed': 'green',
                        'permissive-Movement-Allowed': 'green',
@@ -451,11 +473,14 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration):
     else:
         t1s = (minEndTimeStamp.hour * 3600 + minEndTimeStamp.minute * 60 + minEndTimeStamp.second) - \
                            ((reference_timestamp.hour * 60 + reference_timestamp.minute) * 60 + reference_timestamp.second)
-        t1e = t1s + greenDuration
+        # t1e = t1s + greenDuration
+        t1e = t1s + timingPlan[str(intersectionID)]['green']
         r1s = currentTimeReference
 
-    t2s = t1e + redDuration
-    t2e = t2s + greenDuration
+    # t2s = t1e + redDuration
+    t2s = t1e + timingPlan[str(intersectionID)]['red']
+    # t2e = t2s + greenDuration
+    t2e = t2s + timingPlan[str(intersectionID)]['green']
 
     greenWindow = {'currentTime': currentTimeReference, 'status': phase2Status, 't1s': t1s, 't1e': t1e, 't2s': t2s, 't2e': t2e, 'r1s': r1s}
     # print(greenWindow)
@@ -1015,6 +1040,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         if point_latlon is None or not polyline:
             return float('inf')
         lat_p, lon_p = point_latlon
+        dist2StopLine, _ = distance_real_latlon(point_latlon, polyline[0])
         best = float('inf')
         for idx in range(len(polyline) - 1):
             lat1, lon1 = polyline[idx]
@@ -1031,7 +1057,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
                 dist = math.hypot(ep - proj_e, np_ - proj_n)
             if dist < best:
                 best = dist
-        return best
+        return best, dist2StopLine
 
     decoded_map = _decode_map(map_message) if map_message is not None else None
     if decoded_map is not None:
@@ -1131,7 +1157,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
         #print('## [DEBUG] Lane points: ', len(lane_points))
         if len(lane_points) < 2:
             continue
-        distance = _point_to_polyline_distance_latlon(target_ego_latlon_real, lane_points)
+        distance, dist2StopLine = _point_to_polyline_distance_latlon(target_ego_latlon_real, lane_points)
         # print('## [DEBUG] Lateral distance: ', distance)
         if distance > max_search_distance:
             continue
@@ -1143,6 +1169,7 @@ def determine_signal_phase_from_map_latlon(ego_latlon, map_message=None, ego_hea
                 'intersection_id': target_intersection.get('id', {}).get('id'),
                 'approach_id': lane.get('ingressApproach') or lane.get('egressApproach'),
                 'intersection_distance': target_distance,
+                'dist2StopLine': dist2StopLine,
                 'stale': False
             }
 
@@ -1584,7 +1611,7 @@ class vehicle_logger(object):
     def __init__(self, outfile):
         self.csvout = open(outfile, 'w')
         self.csv_w = csv.writer(self.csvout)
-        self.headers = ["TimeStamp", "x", "y", "Heading", "Speed", "Accel", "DesiredSpd"]
+        self.headers = ["TimeStamp", "x", "y", "Heading", "Speed", "Accel", "DesiredSpd", "Speed_Lead", "Spacing", "Dist2StopBar"]
         self.csv_w.writerow(self.headers)
         self.time = time.time()
 
