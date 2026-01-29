@@ -1259,7 +1259,7 @@ def receive_loop(args):
                 SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data, MAP_Record=MAP_Record)
             except Exception as e:
                 logger.error(f"Error processing SPaT data: {e}")
-                SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data, MAP_Record=None)
+                # SPaT_flag, spatInfo, intersection_id = process_SPaT(hex_data, MAP_Record=None)
             
             if SPaT_flag:
                 logger.info(f'**************** SPaT data updated for {str(intersection_id)}: {spatCache}')
@@ -1326,17 +1326,21 @@ def game_loop(args):
     wp_id_cache, wp_id = 0, 0
     reference_timestamp = datetime.datetime.strptime('06:30:00', '%H:%M:%S')
 
-    df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
-    cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
-    # df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints_leftlane_v1.csv') # Get record waypoints
-    # cx, cy, cz = df_waypoints['x'].to_numpy(), -df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
+    ## Right-lane waypoints
+    # df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints.csv') # Get record waypoints
+    # cx, cy, cz = df_waypoints['y'].to_numpy(), df_waypoints['x'].to_numpy(), df_waypoints['z'].to_numpy()
+    ## Left-lane waypoints
+    df_waypoints = pd.read_csv('../../json_scripts/delave_waypoints_leftlane_v1.csv') # Get record waypoints
+    cx, cy, cz = df_waypoints['x'].to_numpy(), -df_waypoints['y'].to_numpy(), df_waypoints['z'].to_numpy()
+
     c_pitch, c_yaw, c_roll = df_waypoints['pitch'].to_numpy(), df_waypoints['yaw'].to_numpy(), df_waypoints['roll'].to_numpy()
     c_distance = df_waypoints['distance_traveled_m'].to_numpy()
-    spawn_pos = carla.Transform(carla.Location(x=-726.36, y=740.29, z=3.0), carla.Rotation(pitch=0.0, yaw=18, roll=0.0))
+    spawn_pos = carla.Transform(carla.Location(x=-736.95, y=732.18, z=3.0), carla.Rotation(pitch=0.0, yaw=24.60, roll=0.0))
     distance_traveled = np.hypot(spawn_pos.location.x - cx[0], spawn_pos.location.y - cy[0])
 
     best_phase = None
     closest_intersection_id, best_SG_id = '8', 2
+    SPEED_LIMIT = 25
 
     veh_coords= {}
 
@@ -1507,25 +1511,25 @@ def game_loop(args):
                     ##if approaching intersection, use eco-approaching algorithm
                     if not pass_or_not:
                         # RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, closest_intersection_dist*3.28, speed*3.6/1.6, spacing*3.28, reference_timestamp, spatCache)
-                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (closest_intersection_dist_carla-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4.5)*3.28, reference_timestamp, spatCache)
+                        RefSpd, dataToSave, errFlag = get_advisory_speed(speed_ego*3.6/1.6, accel_ego, (dist2bar-4)*3.28, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4.5)*3.28, reference_timestamp, spatCache)
                         logger.info('....................Use the latest SPaT to update eco-driving speed!.........................')
                     ##if passed intersection, use CF model
                     else:
                         logger.info(f'****************Do CF with spd cmd {speed_ego:.2f}, lead spd {speed:.2f}, spacing: {spacing:.2f}********************************')
                         # _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, speed*3.6/1.6, spacing*3.28)
                         _, RefSpd = IntelligentDriverModel(speed_ego*3.6/1.6, 20, best_leader['lead_speed']*3.6/1.6, (best_leader['distance']-4)*3.28)
-                    RefSpd = min(30, RefSpd)
+                    RefSpd = min(SPEED_LIMIT, RefSpd)
                     cache_time = datetime.datetime.now().timestamp()
             except Exception as e:
                 logger.error(f"[Carla] Speed planning exception: {e}")
                 logger.info('Cannot get advisory speed! Set to speed limit!')
                 #print(f"[Carla] Speed planning exception: {e}")
                 #print('------------------------ Cannot get advisory speed!!! Set to speed limit!!! ------------------------')
-                RefSpd = 30
+                RefSpd = SPEED_LIMIT
 
             #print('At time: ', reference_timestamp)
             #print(spatCache)
-            print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {speed*3.6/1.6}mph ----------------------')
+            print(f'-------------------- Ego speed: {speed_ego*3.6/1.6}mph;  Reference speed: {RefSpd}mph;  Lead speed: {best_leader["lead_speed"]*3.6/1.6}mph ----------------------')
             #print(f'-------------------- Gap: {spacing}m;  Speed diff: {speed_difference}m/s; Travel distance: {distance_traveled}m; To stopbar: {dist2bar}m --------------------------')
             
             #print(controller.eco_drive)
@@ -1665,7 +1669,7 @@ def main():
 
     print(__doc__)
 
-    thread_recv = threading.Thread(target=receive_loop, args=(args,) daemon=True)
+    thread_recv = threading.Thread(target=receive_loop, args=(args,), daemon=True)
     thread_carla = threading.Thread(target=game_loop, args=(args,), daemon=True)
 
     thread_recv.start()

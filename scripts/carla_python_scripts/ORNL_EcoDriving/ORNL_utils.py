@@ -385,15 +385,29 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration, 
     """
     cycleLength = 90
     timingPlan = {
-        '1': {'green': 49, 'red': cycleLength - 49},
-        '2': {'green': 50, 'red': cycleLength - 50},
-        '3': {'green': 50, 'red': cycleLength - 50},
-        '4': {'green': 64, 'red': cycleLength - 64},
-        '5': {'green': 64, 'red': cycleLength - 64},
-        '6': {'green': 64, 'red': cycleLength - 64},
-        '7': {'green': 59, 'red': cycleLength - 59},
-        '8': {'green': 49, 'red': cycleLength - 49}
+        'Adaptive': {
+            '1': {'green': 49, 'red': cycleLength - 49},
+            '2': {'green': 50, 'red': cycleLength - 50},
+            '3': {'green': 50, 'red': cycleLength - 50},
+            '4': {'green': 64, 'red': cycleLength - 64},
+            '5': {'green': 64, 'red': cycleLength - 64},
+            '6': {'green': 64, 'red': cycleLength - 64},
+            '7': {'green': 59, 'red': cycleLength - 59},
+            '8': {'green': 49, 'red': cycleLength - 49}
+            },
+        'Default': {
+            '1': {'green': greenDuration, 'red': redDuration},
+            '2': {'green': greenDuration, 'red': redDuration},
+            '3': {'green': greenDuration, 'red': redDuration},
+            '4': {'green': greenDuration, 'red': redDuration},
+            '5': {'green': greenDuration, 'red': redDuration},
+            '6': {'green': greenDuration, 'red': redDuration},
+            '7': {'green': greenDuration, 'red': redDuration},
+            '8': {'green': greenDuration, 'red': redDuration}
+        }
     }
+    timingSelect = 'Default'
+
     decoded_msg = spat_data_process(j2735_tena)
     spatPhaseArray = [""] * 31
     intersectionID = decoded_msg()['value'][1]['intersections'][0]['id']['id']
@@ -473,14 +487,15 @@ def getGreenWindow(j2735_tena, reference_timestamp, greenDuration, redDuration, 
     else:
         t1s = (minEndTimeStamp.hour * 3600 + minEndTimeStamp.minute * 60 + minEndTimeStamp.second) - \
                            ((reference_timestamp.hour * 60 + reference_timestamp.minute) * 60 + reference_timestamp.second)
+        
         # t1e = t1s + greenDuration
-        t1e = t1s + timingPlan[str(intersectionID)]['green']
+        t1e = t1s + timingPlan[timingSelect][str(intersectionID)]['green']
         r1s = currentTimeReference
 
     # t2s = t1e + redDuration
-    t2s = t1e + timingPlan[str(intersectionID)]['red']
+    t2s = t1e + timingPlan[timingSelect][str(intersectionID)]['red']
     # t2e = t2s + greenDuration
-    t2e = t2s + timingPlan[str(intersectionID)]['green']
+    t2e = t2s + timingPlan[timingSelect][str(intersectionID)]['green']
 
     greenWindow = {'currentTime': currentTimeReference, 'status': phase2Status, 't1s': t1s, 't1e': t1e, 't2s': t2s, 't2e': t2e, 'r1s': r1s}
     # print(greenWindow)
@@ -1330,7 +1345,7 @@ def determine_leader(ego_location, bsm_message=None, ego_heading=None, carla_inf
         _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_heading, vehicle_xy[0], vehicle_xy[1])
         vehicle_fwd_vec = _heading_vector(cached['position'], cached['heading'])
         opposite = np.dot(vehicle_fwd_vec, heading_vec)
-        if dist_to_vehicle < 0.5 or abs_d_perp >= 1.5 or opposite < 0:
+        if dist_to_vehicle < 0.5 or abs_d_perp >= 1.6 or opposite < 0:
             continue
         if heading_vec is not None:
             #print("Heading Vec:", heading_vec, "heading angle: ", ego_heading)
@@ -1404,7 +1419,7 @@ def determine_leader_carla(ego_transform, nearby_vehicles, max_search_distance=1
         vec_to_vehicle = np.array(vehicle_xy) - np.array(ego_xy)
         dist_to_vehicle = np.linalg.norm(vec_to_vehicle)
         _, _, abs_d_perp = distances_to_heading(ego_xy[0], ego_xy[1], ego_transform.rotation.yaw, vehicle_xy[0], vehicle_xy[1])
-        if dist_to_vehicle > max_search_distance or abs_d_perp >=1.5:
+        if dist_to_vehicle > max_search_distance or abs_d_perp >=1.6:
             continue
         if heading_vec is not None:
             forward_component = np.dot(vec_to_vehicle, heading_vec)
@@ -1462,8 +1477,8 @@ def get_advisory_speed(cav_spd, cav_acc, dist2Stop, precedSpeed, gapDist, refere
                         SpatData['t1e'], SpatData['t2s'],
                         SpatData['t2e'], SpatData['r1s']]
         
-        with open('./data4Debug_2.txt', 'a') as t:
-            t.write(json.dumps(data_toSave) + '\n')
+        # with open('./data4Debug_2.txt', 'a') as t:
+        #     t.write(json.dumps(data_toSave) + '\n')
         try:
             queue_length, instant_desired_speed, mode, a_out = gen_desired_spd(example_coasting_profile, A, B, C, M,
                                                                                orginal_desire_spd, next_movement, cav_spd, cav_acc,
